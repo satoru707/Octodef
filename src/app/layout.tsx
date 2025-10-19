@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import QueryProvider from "@/hooks/QueryClientProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -21,15 +21,6 @@ export const metadata: Metadata = {
   description: "A cybersecurity defense simulator inspired by the octopus",
 };
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,7 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <QueryClientProvider client={queryClient}>
+        <QueryProvider>
           <div className="dark min-h-screen flex flex-col bg-black">
             <Header />
             <main className="flex-1">{children}</main>
@@ -56,7 +47,7 @@ export default function RootLayout({
               }}
             />
           </div>
-        </QueryClientProvider>
+        </QueryProvider>
       </body>
     </html>
   );

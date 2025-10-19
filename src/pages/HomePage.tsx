@@ -101,7 +101,7 @@ export const HomePage = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              {session ? (
+              {!!session ? (
                 <Button
                   asChild
                   size="lg"
