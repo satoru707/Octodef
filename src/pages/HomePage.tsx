@@ -1,3 +1,6 @@
+"use client";
+import { useState, useEffect } from "react";
+import type { Session } from "next-auth";
 import Link from "next/link";
 import {
   Shield,
@@ -9,11 +12,18 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getSession } from "../lib/auth";
+import { getSession } from "next-auth/react";
 import { OctoDefenderLogo } from "@/components/OctoDefenderLogo";
 
 export const HomePage = () => {
-  const session = getSession();
+  const [session, setSession] = useState<Session | null>(null);
+  useEffect(() => {
+    async function fetchSession() {
+      const session = await getSession();
+      setSession(session);
+    }
+    fetchSession();
+  }, []);
 
   const features = [
     {
@@ -54,10 +64,8 @@ export const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#1e3a8a]/10 via-transparent to-transparent" />
-        {/* Animated grid background */}
         <div className="absolute inset-0 opacity-10">
           <div
             className="absolute inset-0"
@@ -71,7 +79,6 @@ export const HomePage = () => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-24">
           <div className="text-center space-y-8">
-            {/* Logo showcase */}
             <div className="flex justify-center mb-6">
               <OctoDefenderLogo
                 className="w-24 h-24"
@@ -107,10 +114,7 @@ export const HomePage = () => {
                   size="lg"
                   className="bg-[#1e3a8a] hover:bg-[#2563eb] text-white"
                 >
-                  <Link href="/dashboard">
-                    Go to Dashboard
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Link>
+                  <Link href="/dashboard">Go to Dashboard</Link>
                 </Button>
               ) : (
                 <>
@@ -119,10 +123,7 @@ export const HomePage = () => {
                     size="lg"
                     className="bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] hover:from-[#2563eb] hover:to-[#1e3a8a] text-white"
                   >
-                    <Link href="/auth/signin">
-                      Get Started
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </Link>
+                    <Link href="/auth/signin">Get Started</Link>
                   </Button>
                   <Button
                     asChild
@@ -139,7 +140,6 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-24 border-t border-[#1e3a8a]/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -170,7 +170,6 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* Agents Section */}
       <section className="py-24 border-t border-[#1e3a8a]/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -204,12 +203,10 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       {!session && (
         <section className="py-24 border-t border-[#1e3a8a]/10">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="relative bg-gradient-to-br from-[#1e3a8a]/20 to-[#065f46]/20 border border-[#1e3a8a]/30 rounded-2xl p-12 overflow-hidden">
-              {/* Glow effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-[#1e3a8a]/10 via-transparent to-[#065f46]/10 animate-pulse" />
 
               <div className="relative">
@@ -230,10 +227,7 @@ export const HomePage = () => {
                   size="lg"
                   className="bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] hover:from-[#2563eb] hover:to-[#1e3a8a] text-white"
                 >
-                  <Link href="/auth/signin">
-                    Sign In to Get Started
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Link>
+                  <Link href="/auth/signin">Sign In to Get Started</Link>
                 </Button>
               </div>
             </div>

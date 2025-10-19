@@ -1,29 +1,43 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Shield, Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { signIn, getSession } from "../lib/auth";
+import { signIn, getSession } from "next-auth/react";
 import { toast } from "sonner";
 import { SiGoogle, SiGithub, SiX } from "react-icons/si";
 
-export const SignInPage = () => {
+export default function SignInPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [provider, setProvider] = useState<"google" | "github" | "twitter">(
+    "google"
+  );
 
-  if (!!getSession()) {
-    router.push("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    const verifySession = async () => {
+      try {
+        const session = await getSession();
+        if (session?.user) {
+          router.push("/dashboard");
+        }
+      } catch (err) {
+        console.error("Session check failed:", err);
+      }
+    };
+    verifySession();
+  }, [router]);
 
   const handleSignIn = async (provider: "google" | "github" | "twitter") => {
     try {
+      setProvider(provider);
       setIsLoading(true);
       await signIn(provider, { redirectTo: "/dashboard" });
-      toast.success(`Successfully signed in with ${provider}!`);
-      router.push("/dashboard");
-    } catch {
+      toast.success(`Redirecting...`);
+    } catch (error) {
+      console.error(error);
       toast.error("Failed to sign in. Please try again.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -47,7 +61,7 @@ export const SignInPage = () => {
             disabled={isLoading}
             className="w-full bg-white hover:bg-gray-100 text-black h-12 flex items-center justify-center"
           >
-            {isLoading ? (
+            {isLoading && provider == "google" ? (
               <Loader2Icon className="animate-spin" />
             ) : (
               <>
@@ -62,7 +76,7 @@ export const SignInPage = () => {
             disabled={isLoading}
             className="w-full bg-[#24292e] hover:bg-[#1a1e22] text-white h-12 flex items-center justify-center"
           >
-            {isLoading ? (
+            {isLoading && provider == "github" ? (
               <Loader2Icon className="animate-spin" />
             ) : (
               <>
@@ -77,7 +91,7 @@ export const SignInPage = () => {
             disabled={isLoading}
             className="w-full bg-[#1DA1F2] hover:bg-[#1991da] text-white h-12 flex items-center justify-center"
           >
-            {isLoading ? (
+            {isLoading && provider == "twitter" ? (
               <Loader2Icon className="animate-spin" />
             ) : (
               <>
@@ -94,4 +108,4 @@ export const SignInPage = () => {
       </div>
     </div>
   );
-};
+}

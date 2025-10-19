@@ -15,12 +15,32 @@ import { ThreatInput, AgentStatus, DefenseResult } from "../lib/types";
 import { AGENTS } from "../lib/mockData";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getSession } from "next-auth/react";
+import type { Session } from "next-auth";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [agents, setAgents] = useState<AgentStatus[]>(
     AGENTS.map((agent) => ({ ...agent, status: "idle" as const, progress: 0 }))
   );
   const [result, setResult] = useState<DefenseResult | null>(null);
+  const [session, setSession] = useState<null | Session>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setLoading(true);
+    async function fetchSession() {
+      const session = await getSession();
+      if (!session) {
+        router.push("/auth/signin");
+        return;
+      }
+      setSession(session);
+      setLoading(false);
+    }
+    fetchSession();
+  }, [router]);
 
   const defendMutation = useDefendMutation();
   const simulateMutation = useSimulateAttackMutation();
@@ -104,6 +124,13 @@ export default function DashboardPage() {
   const handleSimulate = () => {
     simulateMutation.mutate();
   };
+
+  if (loading)
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <LoadingSpinner message="Loading session..." />
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-black pt-24 pb-12">
