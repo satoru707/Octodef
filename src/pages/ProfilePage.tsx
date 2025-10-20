@@ -19,7 +19,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { getSession, signOut } from "next-auth/react";
 import { toast } from "sonner";
-import { SessionProps } from "@/lib/types";
+import { SessionProps } from "@/types/types";
 
 export const ProfilePage = () => {
   const [session, setSession] = useState<SessionProps | null>(null);

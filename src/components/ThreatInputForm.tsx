@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Shield, Zap } from "lucide-react";
-import { ThreatInput, ThreatType } from "@/lib/types";
+import { ThreatInput, ThreatType } from "@/types/types";
 
 interface ThreatInputFormProps {
   onDefend: (input: ThreatInput) => void;

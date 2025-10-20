@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DefenseResult, DefenseSession, ThreatInput } from '../lib/types';
+import { DefenseResult, DefenseSession, ThreatInput } from '../types/types';
 import { generateMockDefenseResult } from "../lib/mockData";
 import { defenseResultCollection } from "./collection";
 

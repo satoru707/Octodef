@@ -1,6 +1,6 @@
 'use server'
 import { db } from "./db";
-import { AgentStatus, DefenseResult, DefenseSession } from "./types";
+import { AgentStatus, DefenseResult, DefenseSession } from "../types/types";
 
 export interface User {
   _id: string;

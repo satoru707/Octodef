@@ -11,7 +11,7 @@ import {
   useDefendMutation,
   useSimulateAttackMutation,
 } from "../lib/defenseQueries";
-import { ThreatInput, AgentStatus, DefenseResult } from "../lib/types";
+import { ThreatInput, AgentStatus, DefenseResult } from "../types/types";
 import { AGENTS } from "../lib/mockData";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,12 +48,10 @@ export default function DashboardPage() {
 
   const isProcessing = defendMutation.isPending || simulateMutation.isPending;
 
-  // Simulate real-time agent updates
   useEffect(() => {
     if (isProcessing) {
       setResult(null);
 
-      // Reset all agents
       setAgents(
         AGENTS.map((agent) => ({
           ...agent,
@@ -62,11 +60,9 @@ export default function DashboardPage() {
         }))
       );
 
-      const agentDuration = 1000; // Each agent takes 1 second
-      // const totalDuration = AGENTS.length * agentDuration;
+      const agentDuration = 1000; 
 
       AGENTS.forEach((agent, index) => {
-        // Start processing this agent
         setTimeout(() => {
           setAgents((prev) =>
             prev.map((a, i) =>
@@ -76,7 +72,6 @@ export default function DashboardPage() {
             )
           );
 
-          // Animate progress
           const progressInterval = setInterval(() => {
             setAgents((prev) =>
               prev.map((a, i) =>
@@ -87,7 +82,6 @@ export default function DashboardPage() {
             );
           }, agentDuration / 10);
 
-          // Complete this agent
           setTimeout(() => {
             clearInterval(progressInterval);
             setAgents((prev) =>
@@ -142,8 +136,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Input & Agents */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-[600px]">
           <div className="lg:col-span-1 space-y-6">
             <ThreatInputForm
               onDefend={handleDefend}
@@ -161,10 +154,9 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Right Column - Results */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-h-[600px]">
             {isProcessing && (
-              <Tabs defaultValue="simulation" className="w-full">
+              <Tabs defaultValue="simulation" className="w-full h-full">
                 <TabsList className="grid w-full grid-cols-2 bg-[#111] border border-[#1e3a8a]/30 mb-4">
                   <TabsTrigger
                     value="simulation"
@@ -180,12 +172,14 @@ export default function DashboardPage() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="simulation" className="mt-0">
-                  <AttackSimulation3D isActive={isProcessing} />
+                <TabsContent value="simulation" className="mt-0 min-h-[600px]">
+                  <div className="h-full">
+                    <AttackSimulation3D isActive={isProcessing} />
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="analysis" className="mt-0">
-                  <div className="bg-[#111] border border-[#1e3a8a]/30 rounded-lg p-12">
+                <TabsContent value="analysis" className="mt-0 min-h-[500px]">
+                  <div className="bg-[#111] border border-[#1e3a8a]/30 rounded-lg p-12 h-full flex items-center justify-center">
                     <LoadingSpinner message="Analyzing threat with 8 AI agents..." />
                   </div>
                 </TabsContent>

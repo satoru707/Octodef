@@ -1,4 +1,4 @@
-import { AgentStatus, DefenseResult, DefenseSession, Finding, ThreatMapData, TimelineEvent, ThreatInput } from './types';
+import { AgentStatus, DefenseResult, DefenseSession, Finding, ThreatMapData, TimelineEvent, ThreatInput } from '../types/types';
 
 export const AGENTS: Omit<AgentStatus, 'status' | 'progress' | 'result'>[] = [
   {

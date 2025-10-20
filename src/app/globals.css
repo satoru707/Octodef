@@ -32,5 +32,10 @@ code, pre {
   font-family: var(--font-mono);
 }
 
+.simulation-container {
+  width: 100%;
+  height: 500px;
+}
+
 /* h1, h2 {
   font-weight: 700; /* or 900 for extra impact */ 

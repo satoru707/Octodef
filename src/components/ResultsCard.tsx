@@ -1,5 +1,5 @@
 import { AlertTriangle, Info, Download, Share2 } from "lucide-react";
-import { DefenseResult } from "../lib/types";
+import { DefenseResult } from "../types/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -48,7 +48,7 @@ export const ResultsCard = ({ result }: ResultsCardProps) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `defense-report-${result.id}.json`;
+    link.download = `defense-report-${result._id}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -57,7 +57,7 @@ export const ResultsCard = ({ result }: ResultsCardProps) => {
   };
 
   const handleCopyShareLink = () => {
-    const shareUrl = `${window.location.origin}/session/${result.id}`;
+    const shareUrl = `${window.location.origin}/session/${result._id}`;
     navigator.clipboard.writeText(shareUrl);
     toast.success("Share link copied to clipboard");
   };

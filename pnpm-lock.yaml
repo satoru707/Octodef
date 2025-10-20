@@ -192,6 +192,9 @@ importers:
       eslint-config-next:
         specifier: 15.5.6
         version: 15.5.6(eslint@9.38.0(jiti@2.6.1))(typescript@5.9.3)
+      jsm:
+        specifier: link:three/examples/jsm
+        version: link:three/examples/jsm
       tailwindcss:
         specifier: ^4
         version: 4.1.14

@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { getSession } from "../lib/auth";
+import { getSession } from "next-auth/react";
 
 interface ProtectedRouteProps {
   children: ReactNode;

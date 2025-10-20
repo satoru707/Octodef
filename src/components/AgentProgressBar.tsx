@@ -1,5 +1,5 @@
 import { CheckCircle2, AlertCircle, Loader2, Circle } from 'lucide-react';
-import { AgentStatus } from '../lib/types';
+import { AgentStatus } from '../types/types';
 import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,

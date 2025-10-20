@@ -1,5 +1,5 @@
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
-import { ThreatMapData } from '@/lib/types';
+import { ThreatMapData } from '@/types/types';
 
 interface ThreatGraphProps {
   data: ThreatMapData[];
