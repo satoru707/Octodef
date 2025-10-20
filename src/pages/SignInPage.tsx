@@ -1,19 +1,51 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Shield, Loader2Icon } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signIn, getSession } from "next-auth/react";
 import { toast } from "sonner";
 import { SiGoogle, SiGithub, SiX } from "react-icons/si";
+import { OctoDefenderLogo } from "@/components/OctoDefenderLogo";
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
-  const [provider, setProvider] = useState<"google" | "github" | "twitter">(
-    "google"
-  );
+  const [provider, setProvider] = useState<"google" | "github" | "twitter">("google");
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || !searchParams) return;
+
+    const error = searchParams.get("error");
+    if (!error) return;
+
+    switch (error) {
+      case "OAuthAccountNotLinked":
+        toast.error(
+          "This email is already linked with another provider. Please use your original login method."
+        );
+        break;
+      case "Configuration":
+        toast.error("There was a configuration issue with authentication.");
+        break;
+      case "AccessDenied":
+        toast.error("Access denied. Please try a different provider.");
+        break;
+      case "Verification":
+        toast.error("Email verification failed.");
+        break;
+      default:
+        toast.error("Sign-in failed. Please try again.");
+        break;
+    }
+  }, [searchParams, isClient]);
 
   useEffect(() => {
     const verifySession = async () => {
@@ -47,7 +79,13 @@ export default function SignInPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-[#1e3a8a]/20 rounded-full mb-4">
-            <Shield className="w-8 h-8 text-[#1e3a8a]" />
+            <div className="flex justify-center mb-6">
+              <OctoDefenderLogo
+                className="w-24 h-24"
+                showText={false}
+                animated={true}
+              />
+            </div>
           </div>
           <h1 className="text-3xl text-white mb-2">Welcome to OctoDefender</h1>
           <p className="text-gray-400">
@@ -61,7 +99,7 @@ export default function SignInPage() {
             disabled={isLoading}
             className="w-full bg-white hover:bg-gray-100 text-black h-12 flex items-center justify-center"
           >
-            {isLoading && provider == "google" ? (
+            {isLoading && provider === "google" ? (
               <Loader2Icon className="animate-spin" />
             ) : (
               <>
@@ -76,7 +114,7 @@ export default function SignInPage() {
             disabled={isLoading}
             className="w-full bg-[#24292e] hover:bg-[#1a1e22] text-white h-12 flex items-center justify-center"
           >
-            {isLoading && provider == "github" ? (
+            {isLoading && provider === "github" ? (
               <Loader2Icon className="animate-spin" />
             ) : (
               <>
@@ -91,7 +129,7 @@ export default function SignInPage() {
             disabled={isLoading}
             className="w-full bg-[#1DA1F2] hover:bg-[#1991da] text-white h-12 flex items-center justify-center"
           >
-            {isLoading && provider == "twitter" ? (
+            {isLoading && provider === "twitter" ? (
               <Loader2Icon className="animate-spin" />
             ) : (
               <>
@@ -100,10 +138,6 @@ export default function SignInPage() {
               </>
             )}
           </Button>
-
-          <p className="text-xs text-gray-500 text-center pt-4">
-            By signing in, you agree to our Terms of Service and Privacy Policy.
-          </p>
         </div>
       </div>
     </div>

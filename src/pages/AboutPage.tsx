@@ -1,4 +1,5 @@
 import { Shield, Cpu, Zap, Lock, Brain, Eye, Bell, Cog } from "lucide-react";
+import { OctoDefenderLogo } from "@/components/OctoDefenderLogo";
 
 export const AboutPage = () => {
   const agents = [
@@ -58,7 +59,13 @@ export const AboutPage = () => {
         {/* Hero Section */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-[#1e3a8a]/20 rounded-full mb-6">
-            <Shield className="w-10 h-10 text-[#1e3a8a]" />
+            <div className="flex justify-center mb-6">
+              <OctoDefenderLogo
+                className="w-24 h-24"
+                showText={false}
+                animated={true}
+              />
+            </div>
           </div>
           <h1 className="text-5xl text-white mb-4">About OctoDefender</h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">

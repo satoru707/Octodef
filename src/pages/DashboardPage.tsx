@@ -25,7 +25,7 @@ export default function DashboardPage() {
   );
   const [result, setResult] = useState<DefenseResult | null>(null);
   const [session, setSession] = useState<null | Session>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -37,6 +37,7 @@ export default function DashboardPage() {
         return;
       }
       setSession(session);
+      console.log("Session", session);
       setLoading(false);
     }
     fetchSession();
@@ -102,7 +103,6 @@ export default function DashboardPage() {
     }
   }, [isProcessing]);
 
-  // Handle successful defense/simulation
   useEffect(() => {
     if (defendMutation.isSuccess && defendMutation.data) {
       setResult(defendMutation.data);

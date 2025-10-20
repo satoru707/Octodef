@@ -21,8 +21,54 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OctoDef",
-  description: "A cybersecurity defense simulator inspired by the octopus",
+  title: {
+    default: "OctoDef — Cybersecurity Defense Simulator",
+    template: "%s | OctoDef"
+  },
+  description: "A next-gen cybersecurity defense simulator inspired by the intelligence of the octopus.",
+  keywords: [
+    "Cybersecurity",
+    "Simulator",
+    "AI Defense",
+    "Ethical Hacking",
+    "OctoDef",
+    "Network Security"
+  ],
+  authors: [{ name: "Praise Olaoye", url: "https://github.com/satoru707" }],
+  creator: "Praise Olaoye",
+  publisher: "Praise Olaoye",
+  metadataBase: new URL("http://localhost:3000/"),
+
+  openGraph: {
+    title: "OctoDef — Cybersecurity Defense Simulator",
+    description: "Train your digital defense instincts through an immersive simulation inspired by the octopus.",
+    url: "http://localhost:3000/",
+    siteName: "OctoDef",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "OctoDef - Cybersecurity Defense Simulator"
+      }
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "OctoDef — Cybersecurity Defense Simulator",
+    description: "Defend, analyze, and evolve — inspired by the octopus.",
+    creator: "@iampraiez",
+    images: ["/og-image.png"]
+  },
+
+  icons: {
+    icon: "/icon.svg", 
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png"
+  },
 };
 
 export default function RootLayout({

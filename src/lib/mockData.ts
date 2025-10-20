@@ -105,55 +105,61 @@ export const generateMockDefenseResult = (input: ThreatInput): DefenseResult => 
   }
 
   return {
-    id: `def-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    _id: `def-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     timestamp: new Date().toISOString(),
     input,
     overallRisk: risk,
     severity,
     agents: AGENTS.map((agent, idx) => ({
       ...agent,
-      status: 'complete' as const,
+      status: "complete" as const,
       progress: 100,
-      result: `${agent.name} analysis complete - ${risk > 50 ? 'threats detected' : 'all clear'}`,
+      result: `${agent.name} analysis complete - ${
+        risk > 50 ? "threats detected" : "all clear"
+      }`,
     })),
     findings,
     remediationSteps,
     threatMap,
     timeline,
+    status: "complete",
   };
 };
 
 export const mockPastSessions: DefenseSession[] = [
   {
-    id: 'sess-001',
+    _id: "sess-001",
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    input: { type: 'url' as const, data: 'https://suspicious-site.com/malware' },
-    status: 'complete' as const,
+    input: {
+      type: "url" as const,
+      data: "https://suspicious-site.com/malware",
+    },
+    status: "complete" as const,
     overallRisk: 87,
-    severity: 'high' as const,
+    severity: "high" as const,
   },
   {
-    id: 'sess-002',
+    _id: "sess-002",
     timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    input: { type: 'ip' as const, data: '192.168.1.100' },
-    status: 'complete' as const,
+    input: { type: "ip" as const, data: "192.168.1.100" },
+    status: "complete" as const,
     overallRisk: 23,
-    severity: 'low' as const,
+    severity: "low" as const,
   },
   {
-    id: 'sess-003',
+    _id: "sess-003",
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    input: { type: 'hash' as const, data: '5d41402abc4b2a76b9719d911017c592' },
-    status: 'complete' as const,
+    input: { type: "hash" as const, data: "5d41402abc4b2a76b9719d911017c592" },
+    status: "complete" as const,
     overallRisk: 65,
-    severity: 'medium' as const,
+    severity: "medium" as const,
   },
   {
-    id: 'sess-004',
+    _id: "sess-004",
     timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    input: { type: 'email' as const, data: 'From: attacker@evil.com...' },
-    status: 'complete' as const,
+    input: { type: "email" as const, data: "From: attacker@evil.com..." },
+    status: "complete" as const,
     overallRisk: 92,
-    severity: 'critical' as const,
+    severity: "critical" as const,
   },
 ];

@@ -14,18 +14,23 @@ const options = {
 };
 
 let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
 if (process.env.NODE_ENV === "development") {
   const globalWithMongo = global as typeof globalThis & {
-    _mongoClient?: MongoClient;
+    _mongoClientPromise?: Promise<MongoClient>;
   };
 
-  if (!globalWithMongo._mongoClient) {
-    globalWithMongo._mongoClient = new MongoClient(uri, options);
+  if (!globalWithMongo._mongoClientPromise) {
+    client = new MongoClient(uri, options)
+    globalWithMongo._mongoClientPromise = client.connect();
   }
-  client = globalWithMongo._mongoClient;
+  clientPromise = globalWithMongo._mongoClientPromise
 } else {
   client = new MongoClient(uri, options);
+  clientPromise = client.connect()
 }
 
-export default client;
+export default clientPromise;
+
+export const db = (await clientPromise).db("octodef");

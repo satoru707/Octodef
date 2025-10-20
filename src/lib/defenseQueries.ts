@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DefenseResult, DefenseSession, ThreatInput } from '../lib/types';
-import { generateMockDefenseResult, mockPastSessions } from '../lib/mockData';
+import { generateMockDefenseResult } from "../lib/mockData";
+import { defenseResultCollection } from "./collection";
 
 // Simulate API call
 const defendThreat = async (input: ThreatInput): Promise<DefenseResult> => {
@@ -34,26 +35,27 @@ const simulateAttack = async (): Promise<DefenseResult> => {
   });
 };
 
+// user user's id
 const fetchPastSessions = async (): Promise<DefenseSession[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(mockPastSessions);
-    }, 500);
-  });
+  const past_collections = await defenseResultCollection
+    .find({ userId: "123" })
+    .sort({ timestamp: -1 })
+    .toArray();
+  return past_collections.map((col: DefenseResult) => ({
+    _id: col._id,
+    timestamp: col.timestamp,
+    input: col.input,
+    status: col.status || "complete",
+    overallRisk: col.overallRisk,
+    severity: col.severity,
+  }));
 };
 
-const fetchSessionDetails = async (id: string): Promise<DefenseResult> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const session = mockPastSessions.find(s => s.id === id);
-      if (!session) {
-        reject(new Error('Session not found'));
-        return;
-      }
-      
-      resolve(generateMockDefenseResult(session.input));
-    }, 800);
-  });
+const fetchSessionDetails = async (
+  id: string
+): Promise<DefenseResult | null> => {
+  const collection = await defenseResultCollection.findOne({ _id: id });
+  return collection;
 };
 
 export const useDefendMutation = () => {

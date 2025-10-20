@@ -1,3 +1,5 @@
+import type { Session } from "next-auth";
+
 export type ThreatType = 'url' | 'ip' | 'hash' | 'log' | 'email';
 
 export interface ThreatInput {
@@ -9,27 +11,29 @@ export interface AgentStatus {
   id: string;
   name: string;
   description: string;
-  status: 'idle' | 'processing' | 'complete' | 'error';
+  status: "idle" | "processing" | "complete" | "error";
   progress: number;
   result?: string;
+  userId?: string;
 }
 
 export interface DefenseResult {
-  id: string;
+  _id: string;
   timestamp: string;
   input: ThreatInput;
   overallRisk: number;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: "low" | "medium" | "high" | "critical";
   agents: AgentStatus[];
   findings: Finding[];
   remediationSteps: string[];
   threatMap: ThreatMapData[];
   timeline: TimelineEvent[];
+  status: "pending" | "processing" | "complete" | "failed";
 }
 
 export interface Finding {
   agent: string;
-  type: 'info' | 'warning' | 'critical';
+  type: "info" | "warning" | "critical";
   message: string;
   details?: string;
 }
@@ -47,10 +51,21 @@ export interface TimelineEvent {
 }
 
 export interface DefenseSession {
-  id: string;
+  _id: string;
   timestamp: string;
   input: ThreatInput;
-  status: 'pending' | 'processing' | 'complete' | 'failed';
+  status: "pending" | "processing" | "complete" | "failed";
   overallRisk?: number;
-  severity?: 'low' | 'medium' | 'high' | 'critical';
+  severity?: "low" | "medium" | "high" | "critical";
+  userId?: string;
+}
+
+export interface SessionProps {
+  expires: string;
+  provider: string
+  user : {
+    email: string
+    image: string
+    name: string
+  }
 }

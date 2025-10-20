@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { LogOut, Calendar, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,30 +11,68 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { usePastSessions } from "../lib/defenseQueries";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorMessage } from "@/components/ErrorMessage";
-import { getSession, signOut } from "../lib/auth";
+import { getSession, signOut } from "next-auth/react";
 import { toast } from "sonner";
+import { SessionProps } from "@/lib/types";
 
 export const ProfilePage = () => {
+  const [session, setSession] = useState<SessionProps | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
-  const session = getSession();
   const { data: sessions, isLoading, error, refetch } = usePastSessions();
 
+  useEffect(() => {
+    async function fetchSession() {
+      try {
+        const currentSession = await getSession() as SessionProps;
+        if (!currentSession) {
+          router.push("/auth/signin");
+          return;
+        }
+        setSession({
+          expires: currentSession.expires,
+          provider: currentSession.provider || "",
+          user: {
+            email: currentSession.user?.email || "",
+            image: currentSession.user?.image || "",
+            name: currentSession.user?.name || "",
+          },
+        });
+      } catch (err) {
+        console.error("Session fetch failed:", err);
+        toast.error("Failed to fetch session");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSession();
+  }, [router]);
+
+  // ✅ Handle sign-out
   const handleSignOut = async () => {
     await signOut();
     toast.success("Signed out successfully");
     router.push("/");
   };
 
-  if (!session) {
-    router.push("/auth/signin");
-    return null;
-  }
+  // ✅ Show loader while fetching session
+  if (loading)
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <LoadingSpinner message="Loading session..." />
+      </div>
+    );
 
+  // ✅ Redirect only after effect checks
+  if (!session) return null;
+
+  // ✅ Helper for risk color
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "critical":
@@ -50,6 +91,7 @@ export const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-black pt-24 pb-12">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-4xl text-white mb-2">Profile</h1>
           <p className="text-gray-400">
@@ -58,15 +100,16 @@ export const ProfilePage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Profile Card */}
           <Card className="bg-[#111] border-[#1e3a8a]/30 md:col-span-1">
             <CardHeader className="text-center">
-              <Avatar className="w-24 h-24 mx-auto mb-4">
-                <AvatarImage src={session.user.image} alt={session.user.name} />
-                <AvatarFallback className="bg-[#1e3a8a] text-white text-2xl">
-                  {session.user.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+          <Image
+  src={session?.user?.image || "/default.png"}
+  alt={session?.user?.name || "User"}
+  width={96}
+  height={96}
+  className="rounded-full mx-auto mb-4"
+/>
+
               <CardTitle className="text-white">{session.user.name}</CardTitle>
               <CardDescription className="text-gray-400">
                 {session.user.email}
@@ -76,7 +119,7 @@ export const ProfilePage = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-400">Provider</span>
                 <Badge className="bg-[#1e3a8a]/20 text-[#1e3a8a] border-[#1e3a8a]/50 capitalize">
-                  {session.user.provider}
+                  {session.provider || "unknown"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
@@ -94,7 +137,6 @@ export const ProfilePage = () => {
             </CardContent>
           </Card>
 
-          {/* Stats Cards */}
           <div className="md:col-span-2 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <Card className="bg-[#111] border-[#1e3a8a]/30">
@@ -125,7 +167,6 @@ export const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Past Sessions */}
         <Card className="bg-[#111] border-[#1e3a8a]/30">
           <CardHeader>
             <CardTitle className="text-white">Defense History</CardTitle>
@@ -160,8 +201,8 @@ export const ProfilePage = () => {
               <div className="space-y-3">
                 {sessions.map((session) => (
                   <button
-                    key={session.id}
-                    onClick={() => router.push(`/session/${session.id}`)}
+                    key={session._id}
+                    onClick={() => router.push(`/session/${session._id}`)}
                     className="w-full bg-black border border-[#333] hover:border-[#1e3a8a] rounded-lg p-4 transition-colors text-left"
                   >
                     <div className="flex items-start justify-between gap-4">
