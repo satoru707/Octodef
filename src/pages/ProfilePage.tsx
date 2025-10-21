@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LogOut, Calendar, Shield } from "lucide-react";
+import { Calendar, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,12 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Image from "next/image";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { usePastSessions } from "../lib/defenseQueries";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorMessage } from "@/components/ErrorMessage";
-import { getSession, signOut } from "next-auth/react";
+import { getSession } from "next-auth/react";
 import { toast } from "sonner";
 import { SessionProps } from "@/types/types";
 
@@ -30,7 +29,7 @@ export const ProfilePage = () => {
   useEffect(() => {
     async function fetchSession() {
       try {
-        const currentSession = await getSession() as SessionProps;
+        const currentSession = (await getSession()) as SessionProps;
         if (!currentSession) {
           router.push("/auth/signin");
           return;
@@ -54,14 +53,6 @@ export const ProfilePage = () => {
     fetchSession();
   }, [router]);
 
-  // ✅ Handle sign-out
-  const handleSignOut = async () => {
-    await signOut();
-    toast.success("Signed out successfully");
-    router.push("/");
-  };
-
-  // ✅ Show loader while fetching session
   if (loading)
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -69,10 +60,8 @@ export const ProfilePage = () => {
       </div>
     );
 
-  // ✅ Redirect only after effect checks
   if (!session) return null;
 
-  // ✅ Helper for risk color
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "critical":
@@ -91,7 +80,6 @@ export const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-black pt-24 pb-12">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-4xl text-white mb-2">Profile</h1>
           <p className="text-gray-400">
@@ -102,13 +90,13 @@ export const ProfilePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="bg-[#111] border-[#1e3a8a]/30 md:col-span-1">
             <CardHeader className="text-center">
-          <Image
-  src={session?.user?.image || "/default.png"}
-  alt={session?.user?.name || "User"}
-  width={96}
-  height={96}
-  className="rounded-full mx-auto mb-4"
-/>
+              <Image
+                src={session?.user?.image || "/default.png"}
+                alt={session?.user?.name || "User"}
+                width={96}
+                height={96}
+                className="rounded-full mx-auto mb-4"
+              />
 
               <CardTitle className="text-white">{session.user.name}</CardTitle>
               <CardDescription className="text-gray-400">
@@ -126,14 +114,6 @@ export const ProfilePage = () => {
                 <span className="text-sm text-gray-400">Member since</span>
                 <span className="text-sm text-white">Oct 2025</span>
               </div>
-              <Button
-                onClick={handleSignOut}
-                variant="outline"
-                className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
             </CardContent>
           </Card>
 
