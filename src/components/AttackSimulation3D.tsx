@@ -37,12 +37,10 @@ export const AttackSimulation3D = ({
 
   useEffect(() => {
     if (!containerRef.current || !isActive || !isMounted) {
-      console.log("Skipping setup:", { containerRef: containerRef.current, isActive, isMounted });
       return;
     }
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
-    console.log("Container size on mount:", { width, height });
     if (width === 0 || height === 0) {
       console.error("Container has zero dimensions. Check parent CSS or visibility.");
       return;

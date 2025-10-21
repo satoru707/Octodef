@@ -112,6 +112,7 @@ export default function DashboardPage() {
   }, [simulateMutation.isSuccess, simulateMutation.data]);
 
   const handleDefend = (input: ThreatInput) => {
+    console.log("Input", input);
     defendMutation.mutate(input);
   };
 

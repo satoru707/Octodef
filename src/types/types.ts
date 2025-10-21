@@ -85,3 +85,13 @@ export interface CustomPointsType
   createdAt: number;
   life: number;
 }
+
+export interface Session {
+  expires: string;
+  provider: string;
+  user: {
+    email: string;
+    image: string;
+    name: string;
+  };
+}
