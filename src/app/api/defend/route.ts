@@ -7,7 +7,7 @@ import { DefenseResult } from "@/types/types";
 import {
   analyzeURL,
   analyzeIP,
-  // analyzeHash,
+  analyzeHash,
   // analyzeLog,
   // analyzeEmail,
 } from "@/lib/defense";
@@ -28,9 +28,9 @@ export async function POST(req: NextRequest) {
       case "ip":
         resultData = await analyzeIP(data);
         break;
-      // case "hash":
-      //   resultData = await analyzeHash(data);
-      //   break;
+      case "hash":
+        resultData = await analyzeHash(data);
+        break;
       // case "log":
       //   resultData = await analyzeLog(data);
       //   break;

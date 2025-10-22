@@ -1,32 +1,25 @@
 export const runtime = "nodejs";
 
-import * as crypto from "crypto";
-import VirusTotal from "virustotal-api";
-import * as fs from "fs/promises";
-import { DefenseResult, AgentStatus } from "@/types/types";
+import { DefenseResult, AgentStatus, Finding } from "@/types/types";
 
 const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY || "";
-const vtClient = VT_API_KEY ? new VirusTotal(VT_API_KEY) : null;
 
 export async function analyzeThreat(
-  input: string | Buffer,
-  inputType: "path" | "buffer" = "path"
+  input: string
 ): Promise<Omit<DefenseResult, "timestamp" | "_id">> {
-  console.log(
-    `Starting hash analysis for: ${
-      typeof input === "string" ? input : "buffer"
-    }`
-  );
+  console.time("HASH_ANALYSIS_SPEED");
+
+  console.log(`🔍 Analyzing hash: ${input}`);
 
   const result: Omit<DefenseResult, "timestamp" | "_id"> = {
     input: {
       type: "hash",
-      data: typeof input === "string" ? input : "[file buffer]",
+      data: input,
     },
     overallRisk: 0,
     severity: "low",
     agents: [],
-    findings: [],
+    findings: [] as Finding[],
     remediationSteps: [],
     threatMap: [],
     timeline: [],
@@ -36,18 +29,13 @@ export async function analyzeThreat(
   addTimelineEvent(result, "Hash Analysis Started", "System");
 
   try {
-    const fileHash = await runLocalHashAgent(result, input, inputType);
-    await runVirusTotalAgent(result, fileHash);
+    await runVirusTotalAgent(result, input);
     calculateFinalRisk(result);
     generateRemediationSteps(result);
-
     result.status = "complete";
     addTimelineEvent(result, "Hash Analysis Complete", "System");
-
-    console.log("✅ Hash analysis completed successfully");
     return result;
   } catch (error: unknown) {
-    console.error("❌ Hash analysis failed:", error);
     result.status = "failed";
     addTimelineEvent(
       result,
@@ -56,92 +44,15 @@ export async function analyzeThreat(
       }`,
       "System"
     );
-
     result.overallRisk = 0;
     result.severity = "low";
     result.findings.push({
       agent: "System",
-      type: "warning",
+      type: "warning" as const,
       message: "Hash analysis failed - marked as safe by default",
       details: error instanceof Error ? error.message : "Unknown error",
     });
-
     return result;
-  }
-}
-
-async function runLocalHashAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
-  input: string | Buffer,
-  inputType: "path" | "buffer"
-): Promise<string> {
-  const agentId = "local-hash";
-  const agent: AgentStatus = {
-    id: agentId,
-    name: "Local SHA-256 Hash",
-    description: "Generate SHA-256 hash using Node.js crypto",
-    status: "processing",
-    progress: 0,
-  };
-
-  result.agents.push(agent);
-  addTimelineEvent(result, "Local hash generation started", agent.name);
-
-  try {
-    agent.progress = 30;
-
-    let fileBuffer: Buffer;
-
-    if (inputType === "path") {
-      fileBuffer = await fs.readFile(input as string);
-    } else {
-      fileBuffer = input as Buffer;
-    }
-
-    agent.progress = 60;
-
-    const hash = crypto.createHash("sha256");
-    hash.update(fileBuffer);
-    const fileHash = hash.digest("hex").toLowerCase();
-
-    agent.progress = 100;
-    agent.status = "complete";
-    agent.result = JSON.stringify({
-      hash: fileHash,
-      size: fileBuffer.length,
-      type: inputType,
-    });
-
-    result.input.data = fileHash;
-    result.findings.push({
-      agent: agent.name,
-      type: "info",
-      message: "SHA-256 hash generated successfully",
-      details: `Hash: ${fileHash} | Size: ${(fileBuffer.length / 1024).toFixed(
-        1
-      )} KB`,
-    });
-
-    addTimelineEvent(
-      result,
-      `Hash generated: ${fileHash.slice(0, 16)}...`,
-      agent.name
-    );
-
-    return fileHash;
-  } catch (error) {
-    agent.status = "error";
-    agent.result = `Error: ${
-      error instanceof Error ? error.message : "Unknown error"
-    }`;
-    result.findings.push({
-      agent: agent.name,
-      type: "critical",
-      message: "Hash generation failed",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-
-    return "0000000000000000000000000000000000000000000000000000000000000000";
   }
 }
 
@@ -152,8 +63,8 @@ async function runVirusTotalAgent(
   const agentId = "virustotal";
   const agent: AgentStatus = {
     id: agentId,
-    name: "VirusTotal Hash Scan",
-    description: "60+ antivirus engines hash verification",
+    name: "VirusTotal Intelligence",
+    description: "95+ engines + reputation + behavior analysis",
     status: "processing",
     progress: 0,
   };
@@ -161,73 +72,88 @@ async function runVirusTotalAgent(
   result.agents.push(agent);
   addTimelineEvent(result, "VirusTotal scan started", agent.name);
 
-  if (!vtClient) {
+  if (!VT_API_KEY) {
     agent.progress = 100;
     agent.status = "error";
     agent.result = "No API key configured";
     result.findings.push({
       agent: agent.name,
-      type: "warning",
+      type: "warning" as const,
       message: "VirusTotal skipped - no API key",
+      details: "Add VIRUSTOTAL_API_KEY to .env",
     });
     return;
   }
 
   try {
-    agent.progress = 25;
+    agent.progress = 50;
+    const response = await fetch(
+      `https://www.virustotal.com/vtapi/v2/file/report?apikey=${VT_API_KEY}&resource=${fileHash}`,
+      {
+        method: "GET",
+      }
+    );
 
-    const vtResult = await vtClient.hashReport(fileHash);
-
-    agent.progress = 75;
-    if (vtResult.data.attributes.status === "queued") {
-      await sleep(3000);
-      const retryResult = await vtClient.hashReport(fileHash);
-      vtResult.data = retryResult.data;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
+    const vtResult = await response.json();
     agent.progress = 100;
     agent.status = "complete";
     agent.result = JSON.stringify(vtResult);
-
-    const { last_analysis_stats, names } = vtResult.data.attributes;
-    const positives = last_analysis_stats.malicious || 0;
-    const total =
-      last_analysis_stats.malicious + last_analysis_stats.harmless || 1;
+    const positives = vtResult.positives || 0;
+    const total = vtResult.total || 1;
+    const scanDate = vtResult.scan_date || "Unknown";
+    const permalink = vtResult.permalink || "";
     const detectionRate = ((positives / total) * 100).toFixed(1);
 
-    const details = `Positives: ${positives}/${total} | Detection: ${detectionRate}% | Names: ${
-      names?.join(", ") || "None"
-    }`;
+    const scans = vtResult.scans || {};
+    const engineDetections = Object.entries(scans)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      .filter(([_, result]) => (result as { detected: boolean }).detected)
+      .map(([engine]) => engine)
+      .slice(0, 5);
+
+    const details = [
+      `Detection: ${positives}/${total} (${detectionRate}%)`,
+      `Scan date: ${scanDate}`,
+      `Engines: ${engineDetections.join(", ") || "None"}`,
+      `Permalink: ${permalink ? "Available" : "None"}`,
+    ].join(" | ");
+
+    const riskBoost = Math.min(positives * 10, 95);
+    result.overallRisk += riskBoost;
 
     if (positives > 0) {
-      const riskBoost = Math.min(positives * 8, 80);
-      result.overallRisk += riskBoost;
+      const findingType = positives > 3 ? "critical" : "warning";
 
-      const findingType = positives > 5 ? "critical" : "warning";
       result.findings.push({
         agent: agent.name,
         type: findingType,
-        message: `File flagged by ${positives} engines`,
+        message: `${positives} engines flagged this hash`,
         details: details,
       });
-      addTimelineEvent(result, `${positives} malware detections`, agent.name);
+
+      addTimelineEvent(result, `${positives} detections`, agent.name);
     } else {
       result.findings.push({
         agent: agent.name,
-        type: "info",
-        message: "File clean by all engines",
-        details,
+        type: "info" as const,
+        message: `Clean hash (${positives}/${total})`,
+        details: details,
       });
     }
   } catch (error: unknown) {
     agent.status = "error";
-    agent.result = `API Error: ${
+    agent.result = `Error: ${
       error instanceof Error ? error.message : "Unknown error"
     }`;
     result.findings.push({
       agent: agent.name,
-      type: "warning",
-      message: "VirusTotal hash check failed",
+      type: "warning" as const,
+      message: "VirusTotal lookup failed",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
@@ -242,10 +168,9 @@ function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
   else result.severity = "low";
 
   result.threatMap = [
-    { category: "Local Hash", risk: 0, threats: 1 },
     {
-      category: "VirusTotal Engines",
-      risk: Math.min(result.overallRisk, 100),
+      category: "VirusTotal Intelligence",
+      risk: result.overallRisk,
       threats: result.overallRisk > 0 ? 1 : 0,
     },
   ];
@@ -255,15 +180,16 @@ function generateRemediationSteps(
   result: Omit<DefenseResult, "timestamp" | "_id">
 ) {
   const steps = [
-    "1. Quarantine the file immediately",
-    "2. Delete from all systems",
-    "3. Scan entire environment",
+    "1. BLOCK this hash immediately",
+    "2. Scan all systems for matching files",
+    "3. Quarantine any matches",
   ];
 
   if (result.severity === "critical") {
     steps.push(
-      "4. Notify security incident response team",
-      "5. Submit sample to research"
+      "4. Notify incident response team NOW",
+      "5. Submit to threat intelligence",
+      "6. Update all security signatures"
     );
   }
 
@@ -280,8 +206,4 @@ function addTimelineEvent(
     agent,
     event,
   });
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
