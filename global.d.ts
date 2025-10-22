@@ -17,3 +17,8 @@ declare module "input-otp" {
   import { InputOTP } from "input-otp";
   export default InputOTP;
 }
+
+declare module "geoip-country-lite" {
+  const country: (ip: string) => string | null;
+  export default country;
+}

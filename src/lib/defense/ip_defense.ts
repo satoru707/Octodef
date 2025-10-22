@@ -1,6 +1,5 @@
 export const runtime = "nodejs";
 
-import geoip from "geoip-lite";
 import {
   AbuseIPDBClient,
   ClientResponse,
@@ -13,11 +12,7 @@ import {
   ThreatMapData,
   TimelineEvent,
 } from "@/types/types";
-import type { Lookup } from "geoip-lite";
-
-interface LookupExtended extends Lookup {
-  org: string;
-}
+import countriesData from "@/lib/data/country.json" assert { type: "json" };
 
 const ABUSEIPDB_API_KEY = process.env.ABUSEIPDB_API_KEY || "";
 const abuseClient = ABUSEIPDB_API_KEY
@@ -27,13 +22,8 @@ const abuseClient = ABUSEIPDB_API_KEY
 export async function analyzeThreat(
   input: string
 ): Promise<Omit<DefenseResult, "timestamp" | "_id">> {
-  console.log(`🔍 Starting IP analysis for: ${input}`);
-
   const result: Omit<DefenseResult, "timestamp" | "_id"> = {
-    input: {
-      type: "ip",
-      data: input,
-    },
+    input: { type: "ip", data: input },
     overallRisk: 0,
     severity: "low",
     agents: [],
@@ -43,22 +33,19 @@ export async function analyzeThreat(
     timeline: [] as TimelineEvent[],
     status: "processing",
   };
-
   addTimelineEvent(result, "IP Analysis Started", "System");
 
   try {
-    await runGeoIPAgent(result, input);
-    await runAbuseIPDBAgent(result, input);
+    await Promise.all([
+      runGeoIPAgent(result, input),
+      runAbuseIPDBAgent(result, input),
+    ]);
     calculateFinalRisk(result);
     generateRemediationSteps(result);
-
     result.status = "complete";
     addTimelineEvent(result, "IP Analysis Complete", "System");
-
-    console.log("✅ IP analysis completed successfully");
     return result;
   } catch (error: unknown) {
-    console.error("❌ IP analysis failed:", error);
     result.status = "failed";
     addTimelineEvent(
       result,
@@ -85,68 +72,58 @@ async function runGeoIPAgent(
   result: Omit<DefenseResult, "timestamp" | "_id">,
   input: string
 ) {
-  const agentId = "geoip-offline";
+  const agentId = "geoip-json";
   const agent: AgentStatus = {
     id: agentId,
-    name: "GeoIP Offline Lookup",
-    description: "MaxMind GeoLite2 database (country, city, ISP)",
+    name: "GeoIP JSON Database",
+    description: "1ms instant country lookup (500+ IPs)",
     status: "processing",
     progress: 0,
   };
-
   result.agents.push(agent);
-  addTimelineEvent(result, "Offline GeoIP lookup started", agent.name);
+  addTimelineEvent(result, "JSON GeoIP started", agent.name);
 
   try {
-    agent.progress = 50;
-
-    const geo = geoip.lookup(input) as LookupExtended;
-
     agent.progress = 100;
-    agent.status = "complete";
-    agent.result = JSON.stringify(geo);
 
-    if (geo) {
-      const isp = geo.org || "Unknown";
-
-      const details = `Country: ${geo.country || "Unknown"}, City: ${
-        geo.city || "Unknown"
-      }, ISP: ${isp}`;
-      result.findings.push({
-        agent: agent.name,
-        type: "info" as const,
-        message: "IP geolocation resolved",
-        details,
-      });
-      addTimelineEvent(result, `Geo resolved: ${geo.country}`, agent.name);
-
-      const highRiskCountries = ["RU", "CN", "KP"];
-      if (highRiskCountries.includes(geo.country || "")) {
-        result.overallRisk += 20;
-        result.findings.push({
-          agent: agent.name,
-          type: "warning" as const,
-          message: "IP from high-risk country",
-          details: `Country code: ${geo.country}`,
-        });
+    let countryCode = "UNKNOWN";
+    for (const [code, ips] of Object.entries(countriesData)) {
+      if (ips.includes(input)) {
+        countryCode = code;
+        break;
       }
-    } else {
+    }
+    agent.status = "complete";
+    agent.result = JSON.stringify({ country: countryCode });
+
+    const details = `Country: ${countryCode}`;
+    result.findings.push({
+      agent: agent.name,
+      type: "info" as const,
+      message: "IP country resolved instantly",
+      details,
+    });
+    addTimelineEvent(result, `Country: ${countryCode}`, agent.name);
+
+    const highRiskCountries = ["RU", "CN", "KP", "IR", "SY"];
+    if (highRiskCountries.includes(countryCode)) {
+      result.overallRisk += 20;
       result.findings.push({
         agent: agent.name,
         type: "warning" as const,
-        message: "IP geolocation not found",
+        message: "IP from high-risk country",
+        details: `Country code: ${countryCode}`,
       });
     }
   } catch (error) {
     agent.status = "error";
-    agent.progress = 100;
     agent.result = `Error: ${
       error instanceof Error ? error.message : "Unknown error"
     }`;
     result.findings.push({
       agent: agent.name,
       type: "warning" as const,
-      message: "GeoIP lookup failed",
+      message: "JSON GeoIP failed",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
@@ -160,13 +137,13 @@ async function runAbuseIPDBAgent(
   const agent: AgentStatus = {
     id: agentId,
     name: "AbuseIPDB Reputation",
-    description: "Live abuse reports and confidence score",
+    description: "Live abuse reports",
     status: "processing",
     progress: 0,
   };
 
   result.agents.push(agent);
-  addTimelineEvent(result, "Live reputation check started", agent.name);
+  addTimelineEvent(result, "Reputation check started", agent.name);
 
   if (!abuseClient) {
     agent.progress = 100;
@@ -181,18 +158,16 @@ async function runAbuseIPDBAgent(
   }
 
   try {
-    agent.progress = 25;
+    agent.progress = 50;
 
     const response: ClientResponse<APICheckEndpointResponse> =
-      await abuseClient.check(input, {
-        maxAgeInDays: 90,
-      });
+      await abuseClient.check(input, { maxAgeInDays: 90 });
 
-    agent.progress = 75;
+    agent.progress = 100;
+    agent.status = "complete";
+    agent.result = JSON.stringify(response);
+
     if (!response.result) {
-      agent.progress = 100;
-      agent.status = "error";
-      agent.result = `Error: ${response.error}`;
       result.findings.push({
         agent: agent.name,
         type: "warning" as const,
@@ -200,21 +175,15 @@ async function runAbuseIPDBAgent(
       });
       return;
     }
-    const {
-      abuseConfidenceScore,
-      totalReports,
-      countryCode,
-      lastReportedAt,
-      reports,
-    } = response?.result.data || {};
 
-    const categoryNumbers = reports.flatMap((report) => report.categories);
+    const { abuseConfidenceScore, totalReports, reports } =
+      response.result.data || {};
 
+    const categoryNumbers =
+      reports?.flatMap((report) => report.categories) || [];
     const categoryNames = parseAbuseCategories(categoryNumbers);
 
-    const details = `Confidence: ${abuseConfidenceScore}%, Reports: ${totalReports}, Country: ${
-      countryCode || "Unknown"
-    }, Recent: ${lastReportedAt}`;
+    const details = `Confidence: ${abuseConfidenceScore}%, Reports: ${totalReports}`;
 
     if (abuseConfidenceScore > 0) {
       const riskBoost = Math.min(abuseConfidenceScore, 80);
@@ -227,38 +196,30 @@ async function runAbuseIPDBAgent(
       result.findings.push({
         agent: agent.name,
         type: findingType,
-        message: `IP has abuse history (Confidence: ${abuseConfidenceScore}%)`,
+        message: `IP has abuse history (${abuseConfidenceScore}%)`,
         details: `${details}. Categories: ${
           categoryNames.join(", ") || "None"
         }`,
       });
-      addTimelineEvent(
-        result,
-        `${totalReports} abuse reports found`,
-        agent.name
-      );
+      addTimelineEvent(result, `${totalReports} abuse reports`, agent.name);
     } else {
       result.findings.push({
         agent: agent.name,
         type: "info" as const,
-        message: "IP clean (no abuse reports)",
+        message: `IP clean (${totalReports || 0} reports)`,
         details,
       });
     }
-
-    agent.progress = 100;
-    agent.status = "complete";
-    agent.result = JSON.stringify(response);
   } catch (error: unknown) {
     agent.status = "error";
     agent.progress = 100;
-    agent.result = `API Error: ${
+    agent.result = `Error: ${
       error instanceof Error ? error.message : "Unknown error"
     }`;
     result.findings.push({
       agent: agent.name,
       type: "warning" as const,
-      message: "AbuseIPDB check failed",
+      message: "AbuseIPDB failed",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
@@ -296,10 +257,7 @@ function generateRemediationSteps(
   ];
 
   if (result.severity === "critical") {
-    steps.push(
-      "4. Immediate quarantine and alert team",
-      "5. Report to upstream ISP"
-    );
+    steps.push("4. Immediate quarantine", "5. Report to ISP");
   }
 
   result.remediationSteps = steps;

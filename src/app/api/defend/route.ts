@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         throw new Error("Invalid threat type");
     }
     resultData = JSON.parse(resultData);
-    console.log(resultData.overallRisk, resultData.threatEntries);
+    console.log(resultData.overallRisk, resultData.threatMap);
 
     const defenseResult: DefenseResult = {
       _id: `def-${Date.now()}`,

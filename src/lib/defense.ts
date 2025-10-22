@@ -13,21 +13,22 @@ export async function analyzeURL(data: string) {
 }
 
 export async function analyzeIP(data: string) {
-  console.log(data);
-  return await ip(data);
+  const result = await ip(data);
+  console.log("Result", result);
+  return JSON.stringify(result);
 }
 
 // export async function analyzeHash(data: string) {
-//   console.log(data);
-//   return (await hash(data)) as Omit<DefenseResult, "timestamp" | "_id">;
+// const result = await hash(data)
+//   return JSON.stringify(result);
 // }
 
 // export async function analyzeEmail(data: string) {
-//   console.log(data);
-//   return (await email(data)) as Omit<DefenseResult, "timestamp" | "_id">;
+//   const result = await email(data)
+//   return JSON.stringify(result);
 // }
 
 // export async function analyzeLog(data: string) {
-//   console.log(data);
-//   return (await log(data)) as Omit<DefenseResult, "timestamp" | "_id">;
+//  const result = await log(data)
+//  return JSON.stringify(result);
 // }
