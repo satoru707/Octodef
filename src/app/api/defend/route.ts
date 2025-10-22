@@ -8,8 +8,8 @@ import {
   analyzeURL,
   analyzeIP,
   analyzeHash,
-  // analyzeLog,
-  // analyzeEmail,
+  analyzeLog,
+  analyzeEmail,
 } from "@/lib/defense";
 
 export async function POST(req: NextRequest) {
@@ -31,12 +31,12 @@ export async function POST(req: NextRequest) {
       case "hash":
         resultData = await analyzeHash(data);
         break;
-      // case "log":
-      //   resultData = await analyzeLog(data);
-      //   break;
-      // case "email":
-      //   resultData = await analyzeEmail(data);
-      //   break;
+      case "log":
+        resultData = await analyzeLog(data);
+        break;
+      case "email":
+        resultData = await analyzeEmail(data);
+        break;
       default:
         throw new Error("Invalid threat type");
     }

@@ -49,6 +49,7 @@
     "framer-motion": "^12.23.24",
     "geist": "^1.5.1",
     "geoip-country-lite": "^1.0.0",
+    "geoip-lite": "^1.4.10",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.487.0",
     "mailparser": "^3.7.5",

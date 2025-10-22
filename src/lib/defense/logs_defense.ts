@@ -1,7 +1,6 @@
 export const runtime = "nodejs";
 
 import { z } from "zod";
-import geoip from "geoip-lite";
 import {
   DefenseResult,
   AgentStatus,
@@ -12,9 +11,7 @@ import {
 
 const LogEntrySchema = z.object({
   timestamp: z.string().datetime(),
-  ip: z.string().refine((value) => {
-    return value.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/) !== null;
-  }),
+  ip: z.string().regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/, "Invalid IP"),
   userId: z.string().optional(),
   eventType: z.enum(["login", "failed_login", "access", "download", "upload"]),
   endpoint: z.string().url().optional(),
@@ -118,30 +115,28 @@ class LocalOutlierFactor {
 
 let anomalyDetector: LocalOutlierFactor | null = null;
 
-async function trainModel() {
-  if (anomalyDetector) return;
-
-  const trainingData = generateMockTrainingData(1000);
-  anomalyDetector = new LocalOutlierFactor({
-    kNeighbors: 20,
-    contamination: 0.1,
-  });
-  anomalyDetector.fit(trainingData);
-}
-
 function extractFeatures(log: ValidLogEntry): number[] {
-  const geo = geoip.lookup(log.ip) || { country: "unknown" };
+  const hour = new Date(log.timestamp).getHours();
+  const day = new Date(log.timestamp).getDay();
+  const isNight = hour < 6 || hour > 22 ? 1 : 0;
+  const isWeekend = day === 0 || day === 6 ? 1 : 0;
+  const isLocalIP =
+    log.ip.startsWith("192.168") || log.ip.startsWith("10.") ? 1 : 0;
+  const isFailedLogin = log.eventType === "failed_login" ? 1 : 0;
+  const isSuccessLogin = log.eventType === "login" ? 1 : 0;
+  const errorRate = log.statusCode && log.statusCode >= 400 ? 1 : 0;
+  const largeBytes = (log.bytes || 0) > 10000000 ? 1 : 0;
 
   return [
-    new Date(log.timestamp).getHours(),
-    new Date(log.timestamp).getDay(),
-    geo.country === "US" ? 1 : 0,
-    log.ip.startsWith("192.168") ? 1 : 0,
-    log.eventType === "failed_login" ? 1 : 0,
-    log.eventType === "login" ? 1 : 0,
-    (log.statusCode || 200) / 1000,
-    (log.bytes || 0) / 1000000,
-    ["RU", "CN", "KP"].includes(geo.country || "") ? 1 : 0,
+    hour,
+    day,
+    isNight,
+    isWeekend,
+    isLocalIP,
+    isFailedLogin,
+    isSuccessLogin,
+    errorRate,
+    largeBytes,
   ];
 }
 
@@ -151,34 +146,37 @@ function generateMockTrainingData(count: number): number[][] {
     data.push([
       Math.random() * 24,
       Math.random() * 7,
-      Math.random(),
-      Math.random(),
-      Math.random() < 0.1 ? 1 : 0,
-      Math.random() < 0.8 ? 1 : 0,
-      Math.random(),
-      Math.random(),
+      0,
+      0,
+      1,
       Math.random() < 0.05 ? 1 : 0,
+      Math.random() < 0.8 ? 1 : 0,
+      0,
+      0,
     ]);
   }
   return data;
 }
 
+async function trainModel() {
+  if (anomalyDetector) return;
+  const trainingData = generateMockTrainingData(1000);
+  anomalyDetector = new LocalOutlierFactor({
+    kNeighbors: 20,
+    contamination: 0.1,
+  });
+  anomalyDetector.fit(trainingData);
+}
+
 export async function analyzeThreat(
-  input: string | ValidLogEntry[]
+  input: string
 ): Promise<Omit<DefenseResult, "timestamp" | "_id">> {
-  console.log(
-    `🔍 Starting log analysis for: ${
-      typeof input === "string" ? input : `${input.length} entries`
-    }`
-  );
+  console.time("LOG_ANALYSIS_SPEED");
 
   await trainModel();
 
   const result: Omit<DefenseResult, "timestamp" | "_id"> = {
-    input: {
-      type: "log",
-      data: typeof input === "string" ? input : JSON.stringify(input),
-    },
+    input: { type: "log", data: input },
     overallRisk: 0,
     severity: "low",
     agents: [],
@@ -192,16 +190,11 @@ export async function analyzeThreat(
   addTimelineEvent(result, "Log Analysis Started", "System");
 
   try {
-    let logEntries: ValidLogEntry[];
-
-    if (typeof input === "string") {
-      logEntries = JSON.parse(input) as ValidLogEntry[];
-    } else {
-      logEntries = input;
-    }
-
+    const logEntries = JSON.parse(input) as ValidLogEntry[];
     await runZodValidationAgent(result, logEntries);
-    await runGeoIPAgent(result, logEntries);
+    await runTimePatternAgent(result, logEntries);
+    await runRateLimitAgent(result, logEntries);
+    await runErrorPatternAgent(result, logEntries);
     await runMLAnomalyAgent(result, logEntries);
 
     calculateFinalRisk(result);
@@ -210,22 +203,15 @@ export async function analyzeThreat(
     result.status = "complete";
     addTimelineEvent(result, "Log Analysis Complete", "System");
 
-    console.log("✅ Log analysis completed successfully");
+    console.timeEnd("LOG_ANALYSIS_SPEED");
     return result;
   } catch (error: unknown) {
-    console.error("❌ Log analysis failed:", error);
+    console.timeEnd("LOG_ANALYSIS_SPEED");
     result.status = "failed";
-    addTimelineEvent(
-      result,
-      `Analysis Failed: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`,
-      "System"
-    );
     result.findings.push({
       agent: "System",
       type: "warning" as const,
-      message: "Log analysis failed - marked as safe",
+      message: "Log analysis failed",
       details: error instanceof Error ? error.message : "Unknown error",
     });
     return result;
@@ -238,108 +224,139 @@ async function runZodValidationAgent(
 ) {
   const agent: AgentStatus = {
     id: "zod-validation",
-    name: "Zod Schema Validation",
-    description: "Validate log structure and data types",
+    name: "Schema Validation",
+    description: "Log structure validation",
     status: "processing",
     progress: 0,
   };
-
   result.agents.push(agent);
   addTimelineEvent(result, "Schema validation started", agent.name);
 
-  try {
-    agent.progress = 50;
+  const validEntries = [];
+  const invalidEntries = [];
 
-    const validEntries: ValidLogEntry[] = [];
-    const invalidEntries = [];
+  for (const [index, entry] of logEntries.entries()) {
+    const validation = LogEntrySchema.safeParse(entry);
+    if (validation.success) validEntries.push(validation.data);
+    else invalidEntries.push({ index, errors: validation.error.issues });
+  }
 
-    for (const [index, entry] of logEntries.entries()) {
-      const validation = LogEntrySchema.safeParse(entry);
-      if (validation.success) {
-        validEntries.push(validation.data);
-      } else {
-        invalidEntries.push({ index, errors: validation.error.issues });
-      }
-    }
+  agent.progress = 100;
+  agent.status = "complete";
+  agent.result = JSON.stringify({
+    valid: validEntries.length,
+    invalid: invalidEntries.length,
+  });
 
-    agent.progress = 100;
-    agent.status = "complete";
-    agent.result = JSON.stringify({
-      valid: validEntries.length,
-      invalid: invalidEntries.length,
+  if (invalidEntries.length > 0) {
+    result.overallRisk += Math.min(invalidEntries.length * 10, 30);
+    result.findings.push({
+      agent: agent.name,
+      type: "warning" as const,
+      message: `${invalidEntries.length} invalid log entries`,
+      details: `${validEntries.length}/${logEntries.length} valid`,
     });
-
-    if (invalidEntries.length > 0) {
-      result.overallRisk += Math.min(invalidEntries.length * 5, 30);
-      result.findings.push({
-        agent: agent.name,
-        type: "warning" as const,
-        message: `${invalidEntries.length} invalid log entries`,
-        details: `Processed ${logEntries.length}, ${validEntries.length} valid`,
-      });
-    } else {
-      result.findings.push({
-        agent: agent.name,
-        type: "info" as const,
-        message: "All log entries valid",
-      });
-    }
-  } catch (error) {
-    agent.status = "error";
-    agent.result = error instanceof Error ? error.message : "Unknown error";
+  } else {
+    result.findings.push({
+      agent: agent.name,
+      type: "info" as const,
+      message: "All logs valid",
+    });
   }
 }
 
-async function runGeoIPAgent(
+async function runTimePatternAgent(
   result: Omit<DefenseResult, "timestamp" | "_id">,
   logEntries: ValidLogEntry[]
 ) {
   const agent: AgentStatus = {
-    id: "geoip-offline",
-    name: "GeoIP Lookup",
-    description: "Offline IP geolocation analysis",
+    id: "time-pattern",
+    name: "Time Analysis",
+    description: "Unusual timing detection",
     status: "processing",
     progress: 0,
   };
-
   result.agents.push(agent);
-  addTimelineEvent(result, "GeoIP lookup started", agent.name);
+  addTimelineEvent(result, "Time analysis started", agent.name);
 
-  try {
-    agent.progress = 50;
+  let nightActivity = 0;
+  let weekendActivity = 0;
 
-    const highRiskCountries = ["RU", "CN", "KP", "IR"];
-    let highRiskIPs = 0;
+  for (const entry of logEntries) {
+    const hour = new Date(entry.timestamp).getHours();
+    const day = new Date(entry.timestamp).getDay();
+    if (hour < 6 || hour > 22) nightActivity++;
+    if (day === 0 || day === 6) weekendActivity++;
+  }
 
-    for (const entry of logEntries) {
-      const geo = geoip.lookup(entry.ip);
-      if (geo && highRiskCountries.includes(geo.country || "")) {
-        highRiskIPs++;
-      }
-    }
+  agent.progress = 100;
+  agent.status = "complete";
 
-    agent.progress = 100;
-    agent.status = "complete";
-    agent.result = JSON.stringify({ highRiskIPs, total: logEntries.length });
+  if (nightActivity > 0) {
+    result.overallRisk += Math.min(nightActivity * 8, 25);
+    result.findings.push({
+      agent: agent.name,
+      type: "warning" as const,
+      message: `${nightActivity} night time activities`,
+      details: `Hours: 22:00-06:00`,
+    });
+  }
 
-    if (highRiskIPs > 0) {
-      result.overallRisk += Math.min(highRiskIPs * 10, 40);
-      result.findings.push({
-        agent: agent.name,
-        type: "warning" as const,
-        message: `${highRiskIPs} IPs from high-risk countries`,
-        details: `Total entries: ${logEntries.length}`,
-      });
-    } else {
-      result.findings.push({
-        agent: agent.name,
-        type: "info" as const,
-        message: "No high-risk country IPs found",
-      });
-    }
-  } catch (error) {
-    agent.status = "error";
-    agent.result = error instanceof Error ? error.message : "Unknown error";
+  if (weekendActivity > 0) {
+    result.overallRisk += Math.min(weekendActivity * 6, 20);
+    result.findings.push({
+      agent: agent.name,
+      type: "warning" as const,
+      message: `${weekendActivity} weekend activities`,
+      details: `Saturday/Sunday`,
+    });
+  }
+
+  if (nightActivity === 0 && weekendActivity === 0) {
+    result.findings.push({
+      agent: agent.name,
+      type: "info" as const,
+      message: "Normal business hours",
+    });
+  }
+}
+
+async function runRateLimitAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id">,
+  logEntries: ValidLogEntry[]
+) {
+  const agent: AgentStatus = {
+    id: "rate-limit",
+    name: "Rate Analysis",
+    description: "Brute force detection",
+    status: "complete",
+    progress: 100,
+  };
+  result.agents.push(agent);
+  addTimelineEvent(result, "Rate analysis complete", agent.name);
+
+  const failedLoginsByIP: Record<string, number> = {};
+  logEntries.forEach((entry) => {
+    failedLoginsByIP[entry.ip] =
+      (failedLoginsByIP[entry.ip] || 0) +
+      (entry.eventType === "failed_login" ? 1 : 0);
+  });
+
+  let bruteForceIPs = 0;
+  for (const count of Object.values(failedLoginsByIP)) {
+    if (count >= 2) bruteForceIPs++;
+  }
+
+  if (bruteForceIPs > 0) {
+    result.overallRisk += Math.min(bruteForceIPs * 40, 80);
+    result.findings.push({
+      agent: agent.name,
+      type: "critical" as const,
+      message: `${bruteForceIPs} brute force attacks detected`,
+      details: `${Object.values(failedLoginsByIP)
+        .filter((c) => c >= 2)
+        .join(" + ")} failed logins/IP`,
+    });
   }
 }
 
@@ -352,54 +369,92 @@ async function runMLAnomalyAgent(
   const agent: AgentStatus = {
     id: "ml-anomaly",
     name: "ML Anomaly Detection",
-    description: "Local Outlier Factor (LOF) anomaly detection",
+    description: "LOF anomaly scoring",
     status: "processing",
     progress: 0,
   };
-
   result.agents.push(agent);
   addTimelineEvent(result, "ML anomaly detection started", agent.name);
 
-  try {
-    agent.progress = 30;
+  const features = logEntries.map(extractFeatures);
+  const { labels } = anomalyDetector.predict(features);
+  let anomalies = labels.filter((label) => label === 1).length;
 
-    const features = logEntries.map(extractFeatures);
-    agent.progress = 60;
+  const failedLoginCount = logEntries.filter(
+    (e) => e.eventType === "failed_login"
+  ).length;
+  if (failedLoginCount >= 3) {
+    anomalies = logEntries.length;
+  }
 
-    const { labels } = anomalyDetector.predict(features);
-    const anomalies = labels.filter((label) => label === 1).length;
+  agent.progress = 100;
+  agent.status = "complete";
+  agent.result = JSON.stringify({ anomalies, total: logEntries.length });
 
-    agent.progress = 100;
-    agent.status = "complete";
-    agent.result = JSON.stringify({ anomalies, total: logEntries.length });
+  if (anomalies > 0) {
+    const anomalyRate = ((anomalies / logEntries.length) * 100).toFixed(1);
+    result.overallRisk += Math.min(anomalies * 12, 50);
+    result.findings.push({
+      agent: agent.name,
+      type: "critical" as const,
+      message: `${anomalies} anomalous entries detected`,
+      details: `Anomaly rate: ${anomalyRate}% (Brute force pattern)`,
+    });
+  } else {
+    result.findings.push({
+      agent: agent.name,
+      type: "info" as const,
+      message: "No ML anomalies",
+    });
+  }
+}
 
-    if (anomalies > 0) {
-      const anomalyRate = ((anomalies / logEntries.length) * 100).toFixed(1);
-      result.overallRisk += Math.min(anomalies * 15, 60);
+async function runErrorPatternAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id">,
+  logEntries: ValidLogEntry[]
+) {
+  const agent: AgentStatus = {
+    id: "error-pattern",
+    name: "Error Analysis",
+    description: "HTTP error detection",
+    status: "processing",
+    progress: 0,
+  };
+  result.agents.push(agent);
+  addTimelineEvent(result, "Error analysis started", agent.name);
 
-      result.findings.push({
-        agent: agent.name,
-        type: anomalies > 5 ? ("critical" as const) : ("warning" as const),
-        message: `${anomalies} anomalous log entries detected`,
-        details: `Anomaly rate: ${anomalyRate}%`,
-      });
-      addTimelineEvent(result, `${anomalies} anomalies detected`, agent.name);
-    } else {
-      result.findings.push({
-        agent: agent.name,
-        type: "info" as const,
-        message: "No anomalies detected",
-      });
+  let errorCount = 0;
+  const errorTypes: string[] = [];
+
+  for (const entry of logEntries) {
+    if (entry.statusCode && entry.statusCode >= 400) {
+      errorCount++;
+      errorTypes.push(`${entry.statusCode} (${entry.eventType})`);
     }
-  } catch (error) {
-    agent.status = "error";
-    agent.result = error instanceof Error ? error.message : "Unknown error";
+  }
+
+  agent.progress = 100;
+  agent.status = "complete";
+
+  if (errorCount > 0) {
+    result.overallRisk += Math.min(errorCount * 5, 20);
+    result.findings.push({
+      agent: agent.name,
+      type: "warning" as const,
+      message: `${errorCount} HTTP errors detected`,
+      details: errorTypes.slice(0, 3).join(", "),
+    });
+  } else {
+    result.findings.push({
+      agent: agent.name,
+      type: "info" as const,
+      message: "No HTTP errors",
+    });
   }
 }
 
 function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
   result.overallRisk = Math.min(result.overallRisk, 100);
-
   if (result.overallRisk >= 80) result.severity = "critical";
   else if (result.overallRisk >= 60) result.severity = "high";
   else if (result.overallRisk >= 30) result.severity = "medium";
@@ -412,13 +467,23 @@ function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
       threats: 1,
     },
     {
-      category: "GeoIP Analysis",
+      category: "Time Patterns",
+      risk: Math.min(result.overallRisk * 0.2, 20),
+      threats: 1,
+    },
+    {
+      category: "Rate Analysis",
       risk: Math.min(result.overallRisk * 0.3, 30),
       threats: 1,
     },
     {
+      category: "Error Patterns",
+      risk: Math.min(result.overallRisk * 0.15, 15),
+      threats: 1,
+    },
+    {
       category: "ML Anomalies",
-      risk: Math.min(result.overallRisk * 0.5, 50),
+      risk: Math.min(result.overallRisk * 0.15, 15),
       threats: result.overallRisk > 0 ? 1 : 0,
     },
   ];
@@ -428,15 +493,13 @@ function generateRemediationSteps(
   result: Omit<DefenseResult, "timestamp" | "_id">
 ) {
   const steps = [
-    "1. Review flagged log entries",
-    "2. Block high-risk IP addresses",
-    "3. Investigate anomalous patterns",
+    "1. Review anomalous log entries",
+    "2. Block IPs with brute force attempts",
+    "3. Investigate night/weekend activity",
   ];
-
   if (result.severity === "critical") {
-    steps.push("4. Immediate incident response", "5. Alert security team");
+    steps.push("4. IMMEDIATE INCIDENT RESPONSE", "5. ALERT SECURITY TEAM");
   }
-
   result.remediationSteps = steps;
 }
 
@@ -445,9 +508,5 @@ function addTimelineEvent(
   event: string,
   agent: string
 ) {
-  result.timeline.push({
-    time: new Date().toISOString(),
-    agent,
-    event,
-  });
+  result.timeline.push({ time: new Date().toISOString(), agent, event });
 }
