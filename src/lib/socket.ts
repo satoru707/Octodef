@@ -4,8 +4,7 @@ let socket: Socket | null = null;
 
 export const initSocket = (): Socket => {
   if (!socket) {
-    // In production, connect to your backend
-    socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
+    socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001", {
       autoConnect: false,
     });
   }

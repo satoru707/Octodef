@@ -34,7 +34,8 @@
     "next-env.d.ts",
     "src/types/three-examples.d.ts",
     "src/types/three-glft.d.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "globals.d.ts"
   ],
   "exclude": [
     "node_modules"

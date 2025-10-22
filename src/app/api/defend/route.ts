@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { Session } from "@/types/types";
@@ -5,9 +7,9 @@ import { DefenseResult } from "@/types/types";
 import {
   analyzeURL,
   analyzeIP,
-  analyzeHash,
-  analyzeLog,
-  analyzeEmail,
+  // analyzeHash,
+  // analyzeLog,
+  // analyzeEmail,
 } from "@/lib/defense";
 
 export async function POST(req: NextRequest) {
@@ -15,6 +17,7 @@ export async function POST(req: NextRequest) {
   const { user } = (await auth()) as Session;
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  console.log("Route data", data, type, user);
 
   let resultData;
   try {
@@ -25,18 +28,20 @@ export async function POST(req: NextRequest) {
       case "ip":
         resultData = await analyzeIP(data);
         break;
-      case "hash":
-        resultData = await analyzeHash(data);
-        break;
-      case "log":
-        resultData = await analyzeLog(data);
-        break;
-      case "email":
-        resultData = await analyzeEmail(data);
-        break;
+      // case "hash":
+      //   resultData = await analyzeHash(data);
+      //   break;
+      // case "log":
+      //   resultData = await analyzeLog(data);
+      //   break;
+      // case "email":
+      //   resultData = await analyzeEmail(data);
+      //   break;
       default:
         throw new Error("Invalid threat type");
     }
+    resultData = JSON.parse(resultData);
+    console.log(resultData.overallRisk, resultData.threatEntries);
 
     const defenseResult: DefenseResult = {
       _id: `def-${Date.now()}`,
@@ -51,7 +56,6 @@ export async function POST(req: NextRequest) {
       timeline: resultData.timeline,
       status: "complete",
     };
-
     return NextResponse.json(defenseResult);
   } catch (error: unknown) {
     console.error(error);
