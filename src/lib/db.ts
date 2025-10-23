@@ -1,11 +1,10 @@
 import { MongoClient, ServerApiVersion } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
-
-if (!uri && process.env.NODE_ENV === "production") {
+if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
 }
 
+const uri = process.env.MONGODB_URI;
 const options = {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -17,10 +16,7 @@ const options = {
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
-if (!uri) {
-  console.warn("MONGODB_URI not set - using mock connection");
-  clientPromise = Promise.resolve({} as MongoClient);
-} else if (process.env.NODE_ENV === "development") {
+if (process.env.NODE_ENV === "development") {
   const globalWithMongo = global as typeof globalThis & {
     _mongoClientPromise?: Promise<MongoClient>;
   };
@@ -37,6 +33,4 @@ if (!uri) {
 
 export default clientPromise;
 
-export const db = process.env.MONGODB_URI
-  ? (await clientPromise).db("octodef")
-  : {};
+export const db = (await clientPromise).db("octodef");

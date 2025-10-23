@@ -118,7 +118,7 @@ export async function DELETE(request: NextRequest) {
 
     const response = await defenseResultCollection.deleteMany({
       _id: { $in: validSessionIds },
-      user_id: user.email, // 🔒 Security
+      user_id: user.email,
     });
     return NextResponse.json({
       success: true,
