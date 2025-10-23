@@ -170,81 +170,54 @@ const composer = new EffectComposer(renderer, renderTarget);
     gridHelper.position.y = -20;
     gridHelper.receiveShadow = true;
     scene.add(gridHelper);
-    //   const particleCount = 150;
-    //   const geometry = new THREE.BufferGeometry();
-    //   const positions = new Float32Array(particleCount * 3);
-    //   const colors = new Float32Array(particleCount * 3);
-    //   const velocities: THREE.Vector3[] = [];
-    //   const color = new THREE.Color();
-    //   for (let i = 0; i < particleCount; i++) {
-    //     const theta = Math.random() * Math.PI * 2;
-    //     const phi = Math.random() * Math.PI;
-    //     const radius = 60 + Math.random() * 20;
-    //     positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-    //     positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-    //     positions[i * 3 + 2] = radius * Math.cos(phi);
-    //     color.setHSL(Math.random(), 0.9, 0.5);
-    //     colors[i * 3] = color.r;
-    //     colors[i * 3 + 1] = color.g;
-    //     colors[i * 3 + 2] = color.b;
-    //     const direction = new THREE.Vector3(-positions[i * 3], -positions[i * 3 + 1], -positions[i * 3 + 2]).normalize();
-    //     velocities.push(direction.multiplyScalar(0.3 + Math.random() * 0.3));
-    //   }
-    //   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    //   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    //   const material = new THREE.PointsMaterial({
-    //     vertexColors: true,
-    //     size: 1.2,
-    //     transparent: true,
-    //     opacity: 0.9,
-    //     blending: THREE.AdditiveBlending,
-    //   });
-    //   const particles = new THREE.Points(geometry, material) as CustomPointsType;
-    //   particles.velocities = velocities;
-    //   particles.createdAt = Date.now();
-    //   scene.add(particles);
-    //   attackParticlesRef.current.push(particles);
-    //   return particles;
-    // };
 
     const createAttackWave = () => {
-  const particleCount = 150;
-  const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(particleCount * 3);
-  const colors = new Float32Array(particleCount * 3);
-  const velocities: THREE.Vector3[] = [];
-  const color = new THREE.Color();
-  for (let i = 0; i < particleCount; i++) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.random() * Math.PI;
-    const radius = 60 + Math.random() * 20;
-    positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = radius * Math.cos(phi);
-    // Favor red hues (0 to 0.1 in HSL hue range for red shades)
-    color.setHSL(Math.random() * 0.1, 0.9, 0.5 + Math.random() * 0.3); // Red base with slight variation
-    colors[i * 3] = color.r;
-    colors[i * 3 + 1] = color.g;
-    colors[i * 3 + 2] = color.b;
-    const direction = new THREE.Vector3(-positions[i * 3], -positions[i * 3 + 1], -positions[i * 3 + 2]).normalize();
-    velocities.push(direction.multiplyScalar(0.3 + Math.random() * 0.3));
-  }
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  const material = new THREE.PointsMaterial({
-    vertexColors: true,
-    size: 1.2,
-    transparent: true,
-    opacity: 0.9,
-    blending: THREE.AdditiveBlending,
-  });
-  const particles = new THREE.Points(geometry, material) as CustomPointsType;
-  particles.velocities = velocities;
-  particles.createdAt = Date.now();
-  scene.add(particles);
-  attackParticlesRef.current.push(particles);
-  return particles;
-};
+      const particleCount = 150;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      const colors = new Float32Array(particleCount * 3);
+      const velocities: THREE.Vector3[] = [];
+      const color = new THREE.Color();
+      for (let i = 0; i < particleCount; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        const radius = 60 + Math.random() * 20;
+        positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = radius * Math.cos(phi);
+        color.setHSL(Math.random() * 0.1, 0.9, 0.5 + Math.random() * 0.3);
+        colors[i * 3] = color.r;
+        colors[i * 3 + 1] = color.g;
+        colors[i * 3 + 2] = color.b;
+        const direction = new THREE.Vector3(
+          -positions[i * 3],
+          -positions[i * 3 + 1],
+          -positions[i * 3 + 2]
+        ).normalize();
+        velocities.push(direction.multiplyScalar(0.3 + Math.random() * 0.3));
+      }
+      geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(positions, 3)
+      );
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const material = new THREE.PointsMaterial({
+        vertexColors: true,
+        size: 1.2,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+      });
+      const particles = new THREE.Points(
+        geometry,
+        material
+      ) as CustomPointsType;
+      particles.velocities = velocities;
+      particles.createdAt = Date.now();
+      scene.add(particles);
+      attackParticlesRef.current.push(particles);
+      return particles;
+    };
     const createExplosion = (position: THREE.Vector3) => {
       const particleCount = 50;
       const geometry = new THREE.BufferGeometry();
@@ -277,7 +250,14 @@ const composer = new EffectComposer(renderer, renderTarget);
     };
 
     const animate = () => {
-      if (!isMounted || !rendererRef.current || !sceneRef.current || !cameraRef.current || !composerRef.current) return;
+      if (
+        !isMounted ||
+        !rendererRef.current ||
+        !sceneRef.current ||
+        !cameraRef.current ||
+        !composerRef.current
+      )
+        return;
 
       const delta = clockRef.current.getDelta();
       const time = Date.now();
@@ -289,48 +269,68 @@ const composer = new EffectComposer(renderer, renderTarget);
           const scale = 1 + Math.sin(time * 0.002 * speedFactor) * 0.05;
           centerOctopusRef.current.scale.set(scale, scale, scale);
           const coreScale = 0.8 + Math.sin(time * 0.003 * speedFactor) * 0.1;
-          (centerOctopusRef.current.children[1] as THREE.Mesh).scale.set(coreScale, coreScale, coreScale);
+          (centerOctopusRef.current.children[1] as THREE.Mesh).scale.set(
+            coreScale,
+            coreScale,
+            coreScale
+          );
         }
 
         if (isActive && time - lastFrameTime > 1500 / speedFactor) {
           createAttackWave();
+          // eslint-disable-next-line react-hooks/exhaustive-deps
           lastFrameTime = time;
         }
 
-        attackParticlesRef.current = attackParticlesRef.current.filter((particles) => {
-          const positions = particles.geometry.attributes.position.array as Float32Array;
-          const velocities = particles.velocities;
-          let particlesAlive = 0;
-          for (let i = 0; i < positions.length / 3; i++) {
-            const idx = i * 3;
-            positions[idx] += velocities[i].x * delta * speedFactor;
-            positions[idx + 1] += velocities[i].y * delta * speedFactor;
-            positions[idx + 2] += velocities[i].z * delta * speedFactor;
-            const distance = Math.sqrt(positions[idx] ** 2 + positions[idx + 1] ** 2 + positions[idx + 2] ** 2);
-            if (distance < 15) {
-              createExplosion(new THREE.Vector3(positions[idx], positions[idx + 1], positions[idx + 2]));
-              positions[idx] = 1000;
-              positions[idx + 1] = 1000;
-              positions[idx + 2] = 1000;
-            } else if (distance < 100) {
-              particlesAlive++;
+        attackParticlesRef.current = attackParticlesRef.current.filter(
+          (particles) => {
+            const positions = particles.geometry.attributes.position
+              .array as Float32Array;
+            const velocities = particles.velocities;
+            let particlesAlive = 0;
+            for (let i = 0; i < positions.length / 3; i++) {
+              const idx = i * 3;
+              positions[idx] += velocities[i].x * delta * speedFactor;
+              positions[idx + 1] += velocities[i].y * delta * speedFactor;
+              positions[idx + 2] += velocities[i].z * delta * speedFactor;
+              const distance = Math.sqrt(
+                positions[idx] ** 2 +
+                  positions[idx + 1] ** 2 +
+                  positions[idx + 2] ** 2
+              );
+              if (distance < 15) {
+                createExplosion(
+                  new THREE.Vector3(
+                    positions[idx],
+                    positions[idx + 1],
+                    positions[idx + 2]
+                  )
+                );
+                positions[idx] = 1000;
+                positions[idx + 1] = 1000;
+                positions[idx + 2] = 1000;
+              } else if (distance < 100) {
+                particlesAlive++;
+              }
             }
+            particles.geometry.attributes.position.needsUpdate = true;
+            const age = time - particles.createdAt;
+            if (particlesAlive === 0 || age > 10000 / speedFactor) {
+              scene.remove(particles);
+              particles.geometry.dispose();
+              particles.material.dispose();
+              return false;
+            }
+            return true;
           }
-          particles.geometry.attributes.position.needsUpdate = true;
-          const age = time - particles.createdAt;
-          if (particlesAlive === 0 || age > 10000 / speedFactor) {
-            scene.remove(particles);
-            particles.geometry.dispose();
-            particles.material.dispose();
-            return false;
-          }
-          return true;
-        });
+        );
 
         explosionsRef.current = explosionsRef.current.filter((explosion) => {
-          const positions = explosion.geometry.attributes.position.array as Float32Array;
+          const positions = explosion.geometry.attributes.position
+            .array as Float32Array;
           const velocities = explosion.velocities;
-          const scales = explosion.geometry.attributes.scale.array as Float32Array;
+          const scales = explosion.geometry.attributes.scale
+            .array as Float32Array;
           const age = time - explosion.createdAt;
           const life = explosion.life;
           for (let i = 0; i < positions.length / 3; i++) {
@@ -366,7 +366,11 @@ const composer = new EffectComposer(renderer, renderTarget);
 
       animationRef.current = requestAnimationFrame(animate);
 
-      if (attackParticlesRef.current.length === 0 && explosionsRef.current.length === 0 && isActive) {
+      if (
+        attackParticlesRef.current.length === 0 &&
+        explosionsRef.current.length === 0 &&
+        isActive
+      ) {
         if (onComplete) onComplete();
       }
     };
@@ -374,7 +378,13 @@ const composer = new EffectComposer(renderer, renderTarget);
     animate();
 
     const handleResize = () => {
-      if (!containerRef.current || !cameraRef.current || !rendererRef.current || !composerRef.current) return;
+      if (
+        !containerRef.current ||
+        !cameraRef.current ||
+        !rendererRef.current ||
+        !composerRef.current
+      )
+        return;
       const width = containerRef.current.clientWidth;
       const height = containerRef.current.clientHeight;
       camera.aspect = width / height;
@@ -388,6 +398,7 @@ const composer = new EffectComposer(renderer, renderTarget);
       window.removeEventListener("resize", handleResize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (containerRef.current && rendererRef.current?.domElement) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         containerRef.current.removeChild(rendererRef.current.domElement);
       }
       [rendererRef, composerRef, controlsRef].forEach((ref) => {
@@ -419,6 +430,7 @@ const composer = new EffectComposer(renderer, renderTarget);
     }
     return () => {
       if (containerRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         observer.unobserve(containerRef.current);
       }
     };

@@ -5,8 +5,9 @@ import {
   NormalBufferAttributes,
   PointsMaterial,
 } from "three";
+import { ObjectId } from "mongodb";
 
-export type ThreatType = 'url' | 'ip' | 'hash' | 'log' | 'email';
+export type ThreatType = "url" | "ip" | "hash" | "log" | "email";
 
 export interface ThreatInput {
   type: ThreatType;
@@ -24,7 +25,7 @@ export interface AgentStatus {
 }
 
 export interface DefenseResult {
-  _id: string;
+  _id: ObjectId;
   timestamp: string;
   input: ThreatInput;
   overallRisk: number;
@@ -35,6 +36,7 @@ export interface DefenseResult {
   threatMap: ThreatMapData[];
   timeline: TimelineEvent[];
   status: "pending" | "processing" | "complete" | "failed";
+  userId: string;
 }
 
 export interface Finding {
@@ -68,12 +70,12 @@ export interface DefenseSession {
 
 export interface SessionProps {
   expires: string;
-  provider: string
-  user : {
-    email: string
-    image: string
-    name: string
-  }
+  provider: string;
+  user: {
+    email: string;
+    image: string;
+    name: string;
+  };
 }
 
 export interface CustomPointsType
@@ -94,4 +96,12 @@ export interface Session {
     image: string;
     name: string;
   };
+}
+
+export interface User {
+  _id?: string;
+  name: string;
+  email?: string;
+  image?: string;
+  createdAt: Date;
 }

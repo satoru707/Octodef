@@ -9,7 +9,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { useSessionDetails } from "../lib/defenseQueries";
 
-export const SessionDetailPage = (id: string) => {
+export const SessionDetailPage = ({ id }: { id: string }) => {
   const router = useRouter();
   const { data: result, isLoading, error, refetch } = useSessionDetails(id);
 
@@ -58,3 +58,5 @@ export const SessionDetailPage = (id: string) => {
     </div>
   );
 };
+
+export default SessionDetailPage;

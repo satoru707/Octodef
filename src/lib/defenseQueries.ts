@@ -1,20 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DefenseResult, DefenseSession, ThreatInput } from '../types/types';
 import { generateMockDefenseResult } from "../lib/mockData";
-import { defenseResultCollection } from "./collection";
 import axios from "axios";
 
-// Simulate API call
+// ✅ BUILD SAFETY: Skip queries during build
+const isClient = typeof window !== "undefined";
+
 const defendThreat = async (input: ThreatInput): Promise<DefenseResult> => {
-  const response = await axios.post(
-    `http://localhost:3000/api/defend`,
-    JSON.stringify(input)
-  );
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(generateMockDefenseResult(input));
-    }, 8000); // 8 seconds to simulate 8 agents processing
-  });
+  const response = await axios.post(`/api/defend`, JSON.stringify(input));
+  return response.data;
 };
 
 const simulateAttack = async (): Promise<DefenseResult> => {
@@ -41,33 +35,34 @@ const simulateAttack = async (): Promise<DefenseResult> => {
   });
 };
 
-// user user's id
 const fetchPastSessions = async (): Promise<DefenseSession[]> => {
-  const past_collections = await defenseResultCollection
-    .find({ userId: "123" })
-    .sort({ timestamp: -1 })
-    .toArray();
-  return past_collections.map((col: DefenseResult) => ({
+  const response = await axios.get(`/api/session`);
+  const past_collections = response.data.map((col: DefenseResult) => ({
     _id: col._id,
     timestamp: col.timestamp,
     input: col.input,
     status: col.status || "complete",
     overallRisk: col.overallRisk,
     severity: col.severity,
-  }));
+  })) as DefenseSession[];
+  return past_collections;
 };
 
 const fetchSessionDetails = async (
   id: string
 ): Promise<DefenseResult | null> => {
-  const collection = await defenseResultCollection.findOne({ _id: id });
-  return collection;
+  const response = await axios.get(`/api/session/${id}`);
+  return response.data;
 };
 
-// it mutates this
+const deleteSessions = async (sessionIds: string[]): Promise<void> => {
+  await axios.delete(`/api/session`, {
+    data: { sessionIds },
+  });
+};
+
 export const useDefendMutation = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: defendThreat,
     onSuccess: () => {
@@ -78,7 +73,6 @@ export const useDefendMutation = () => {
 
 export const useSimulateAttackMutation = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: simulateAttack,
     onSuccess: () => {
@@ -87,19 +81,32 @@ export const useSimulateAttackMutation = () => {
   });
 };
 
+// ✅ FIXED: SKIP DURING BUILD
 export const usePastSessions = () => {
   return useQuery({
     queryKey: ["pastSessions"],
     queryFn: fetchPastSessions,
     staleTime: 5 * 60 * 1000,
+    enabled: isClient, // ✅ BUILD SAFETY
   });
 };
 
+// ✅ FIXED: SKIP DURING BUILD
 export const useSessionDetails = (id: string) => {
   return useQuery({
     queryKey: ["session", id],
     queryFn: () => fetchSessionDetails(id),
     staleTime: 10 * 60 * 1000,
-    enabled: !!id,
+    enabled: isClient && !!id, // ✅ BUILD SAFETY
+  });
+};
+
+export const useDeleteSessions = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSessions,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pastSessions"] });
+    },
   });
 };

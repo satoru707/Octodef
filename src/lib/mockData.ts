@@ -43,46 +43,69 @@ export const AGENTS: Omit<AgentStatus, 'status' | 'progress' | 'result'>[] = [
   },
 ];
 
-export const generateMockDefenseResult = (input: ThreatInput): DefenseResult => {
+export const generateMockDefenseResult = (
+  input: ThreatInput
+): Omit<DefenseResult, "_id"> => {
   const risk = Math.floor(Math.random() * 100);
-  const severity = risk < 30 ? 'low' : risk < 60 ? 'medium' : risk < 85 ? 'high' : 'critical';
+  const severity =
+    risk < 30 ? "low" : risk < 60 ? "medium" : risk < 85 ? "high" : "critical";
 
   const findings: Finding[] = [
     {
-      agent: 'Scout',
-      type: risk > 70 ? 'critical' : 'info',
+      agent: "Scout",
+      type: risk > 70 ? "critical" : "info",
       message: `Detected ${input.type} pattern matching known threat signatures`,
-      details: 'Multiple indicators suggest potential malicious activity',
+      details: "Multiple indicators suggest potential malicious activity",
     },
     {
-      agent: 'Analyst',
-      type: risk > 60 ? 'warning' : 'info',
-      message: 'Behavioral analysis reveals anomalous patterns',
-      details: 'Communication with suspicious domains detected',
+      agent: "Analyst",
+      type: risk > 60 ? "warning" : "info",
+      message: "Behavioral analysis reveals anomalous patterns",
+      details: "Communication with suspicious domains detected",
     },
     {
-      agent: 'Sentinel',
-      type: 'info',
-      message: 'Access control policies verified',
-      details: 'No unauthorized access attempts detected',
+      agent: "Sentinel",
+      type: "info",
+      message: "Access control policies verified",
+      details: "No unauthorized access attempts detected",
     },
   ];
 
   if (risk > 70) {
     findings.push({
-      agent: 'Isolator',
-      type: 'critical',
-      message: 'Immediate isolation recommended',
-      details: 'Threat level exceeds safe operational threshold',
+      agent: "Isolator",
+      type: "critical",
+      message: "Immediate isolation recommended",
+      details: "Threat level exceeds safe operational threshold",
     });
   }
 
   const threatMap: ThreatMapData[] = [
-    { category: 'Malware', risk: Math.floor(Math.random() * 100), threats: Math.floor(Math.random() * 20) },
-    { category: 'Phishing', risk: Math.floor(Math.random() * 100), threats: Math.floor(Math.random() * 15) },
-    { category: 'DDoS', risk: Math.floor(Math.random() * 100), threats: Math.floor(Math.random() * 10) },
-    { category: 'Data Breach', risk: Math.floor(Math.random() * 100), threats: Math.floor(Math.random() * 8) },
-    { category: 'Ransomware', risk: Math.floor(Math.random() * 100), threats: Math.floor(Math.random() * 12) },
+    {
+      category: "Malware",
+      risk: Math.floor(Math.random() * 100),
+      threats: Math.floor(Math.random() * 20),
+    },
+    {
+      category: "Phishing",
+      risk: Math.floor(Math.random() * 100),
+      threats: Math.floor(Math.random() * 15),
+    },
+    {
+      category: "DDoS",
+      risk: Math.floor(Math.random() * 100),
+      threats: Math.floor(Math.random() * 10),
+    },
+    {
+      category: "Data Breach",
+      risk: Math.floor(Math.random() * 100),
+      threats: Math.floor(Math.random() * 8),
+    },
+    {
+      category: "Ransomware",
+      risk: Math.floor(Math.random() * 100),
+      threats: Math.floor(Math.random() * 12),
+    },
   ];
 
   const timeline: TimelineEvent[] = AGENTS.map((agent, idx) => ({
@@ -92,25 +115,32 @@ export const generateMockDefenseResult = (input: ThreatInput): DefenseResult => 
   }));
 
   const remediationSteps: string[] = [
-    'Block suspicious IP addresses at firewall level',
-    'Update threat signatures in IDS/IPS systems',
-    'Quarantine affected endpoints immediately',
-    'Initiate incident response protocol',
-    'Notify security operations center (SOC)',
-    'Document findings for compliance reporting',
+    "Block suspicious IP addresses at firewall level",
+    "Update threat signatures in IDS/IPS systems",
+    "Quarantine affected endpoints immediately",
+    "Initiate incident response protocol",
+    "Notify security operations center (SOC)",
+    "Document findings for compliance reporting",
   ];
 
-  if (severity === 'low') {
-    remediationSteps.splice(2, 2, 'Monitor for 24 hours', 'Update security policies');
+  if (severity === "low") {
+    remediationSteps.splice(
+      2,
+      2,
+      "Monitor for 24 hours",
+      "Update security policies"
+    );
   }
 
   return {
-    _id: `def-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    // _id:
+    //   `def-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`// mongodb object id
+    // ,
     timestamp: new Date().toISOString(),
     input,
     overallRisk: risk,
     severity,
-    agents: AGENTS.map((agent, idx) => ({
+    agents: AGENTS.map((agent) => ({
       ...agent,
       status: "complete" as const,
       progress: 100,
@@ -123,6 +153,7 @@ export const generateMockDefenseResult = (input: ThreatInput): DefenseResult => 
     threatMap,
     timeline,
     status: "complete",
+    userId: "random_user",
   };
 };
 

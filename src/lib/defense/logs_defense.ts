@@ -170,12 +170,12 @@ async function trainModel() {
 
 export async function analyzeThreat(
   input: string
-): Promise<Omit<DefenseResult, "timestamp" | "_id">> {
+): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
   console.time("LOG_ANALYSIS_SPEED");
 
   await trainModel();
 
-  const result: Omit<DefenseResult, "timestamp" | "_id"> = {
+  const result: Omit<DefenseResult, "timestamp" | "_id" | "userId"> = {
     input: { type: "log", data: input },
     overallRisk: 0,
     severity: "low",
@@ -219,7 +219,7 @@ export async function analyzeThreat(
 }
 
 async function runZodValidationAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   logEntries: ValidLogEntry[]
 ) {
   const agent: AgentStatus = {
@@ -266,7 +266,7 @@ async function runZodValidationAgent(
 }
 
 async function runTimePatternAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   logEntries: ValidLogEntry[]
 ) {
   const agent: AgentStatus = {
@@ -322,7 +322,7 @@ async function runTimePatternAgent(
 }
 
 async function runRateLimitAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   logEntries: ValidLogEntry[]
 ) {
   const agent: AgentStatus = {
@@ -361,7 +361,7 @@ async function runRateLimitAgent(
 }
 
 async function runMLAnomalyAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   logEntries: ValidLogEntry[]
 ) {
   if (!anomalyDetector) return;
@@ -410,7 +410,7 @@ async function runMLAnomalyAgent(
 }
 
 async function runErrorPatternAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   logEntries: ValidLogEntry[]
 ) {
   const agent: AgentStatus = {
@@ -453,7 +453,9 @@ async function runErrorPatternAgent(
   }
 }
 
-function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
+function calculateFinalRisk(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
+) {
   result.overallRisk = Math.min(result.overallRisk, 100);
   if (result.overallRisk >= 80) result.severity = "critical";
   else if (result.overallRisk >= 60) result.severity = "high";
@@ -490,7 +492,7 @@ function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
 }
 
 function generateRemediationSteps(
-  result: Omit<DefenseResult, "timestamp" | "_id">
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
   const steps = [
     "1. Review anomalous log entries",
@@ -504,7 +506,7 @@ function generateRemediationSteps(
 }
 
 function addTimelineEvent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   event: string,
   agent: string
 ) {

@@ -156,3 +156,5 @@ export const AboutPage = () => {
     </div>
   );
 };
+
+export default AboutPage;

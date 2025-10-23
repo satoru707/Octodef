@@ -8,31 +8,41 @@ import { analyzeThreat as log } from "./defense/logs_defense";
 import { analyzeThreat as hash } from "./defense/hash_defense";
 
 export async function analyzeURL(data: string) {
-  const result = (await url(data)) as Omit<DefenseResult, "_id" | "timestamp">;
-  console.log("Result", result);
+  const result = (await url(data)) as Omit<
+    DefenseResult,
+    "_id" | "timestamp" | "userId"
+  >;
   return JSON.stringify(result);
 }
 
 export async function analyzeIP(data: string) {
-  const result = (await ip(data)) as Omit<DefenseResult, "_id" | "timestamp">;
-  console.log("Result", result);
+  const result = (await ip(data)) as Omit<
+    DefenseResult,
+    "_id" | "timestamp" | "userId"
+  >;
   return JSON.stringify(result);
 }
 
 export async function analyzeHash(data: string) {
-  const result = (await hash(data)) as Omit<DefenseResult, "_id" | "timestamp">;
-  console.log("Result", result);
+  const result = (await hash(data)) as Omit<
+    DefenseResult,
+    "_id" | "timestamp" | "userId"
+  >;
   return JSON.stringify(result);
 }
 
 export async function analyzeEmail(data: string) {
-  const result = await email(data);
-  console.log("Result", result);
+  const result = (await email(data)) as Omit<
+    DefenseResult,
+    "_id" | "timestamp" | "userId"
+  >;
   return JSON.stringify(result);
 }
 
 export async function analyzeLog(data: string) {
-  const result = (await log(data)) as Omit<DefenseResult, "_id" | "timestamp">;
-  console.log("Result", result);
+  const result = (await log(data)) as Omit<
+    DefenseResult,
+    "_id" | "timestamp" | "userId"
+  >;
   return JSON.stringify(result);
 }

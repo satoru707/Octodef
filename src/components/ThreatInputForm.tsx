@@ -67,14 +67,13 @@ export const ThreatInputForm = ({
       setTimeout(() => {
         setError(`✅ Hash generated`);
       }, 100);
-    } catch (err) {
+    } catch {
       setError("Failed to generate hash");
     } finally {
       setIsGeneratingHash(false);
     }
   };
 
-  // 🔥 DELETE UPLOAD
   const deleteUpload = () => {
     setThreatData("");
     setUploadedFileName(null);

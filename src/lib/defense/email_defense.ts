@@ -5,10 +5,10 @@ import { DefenseResult, AgentStatus } from "@/types/types";
 
 export async function analyzeThreat(
   input: string | Buffer
-): Promise<Omit<DefenseResult, "timestamp" | "_id">> {
+): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
   console.time("EMAIL_ANALYSIS_SPEED");
 
-  const result: Omit<DefenseResult, "timestamp" | "_id"> = {
+  const result: Omit<DefenseResult, "timestamp" | "_id" | "userId"> = {
     input: {
       type: "email",
       data:
@@ -66,7 +66,7 @@ export async function analyzeThreat(
 }
 
 async function runSubjectAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
 ) {
   const agent: AgentStatus = {
@@ -100,7 +100,7 @@ async function runSubjectAgent(
 }
 
 async function runSenderAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
 ) {
   const agent: AgentStatus = {
@@ -143,7 +143,7 @@ async function runSenderAgent(
 }
 
 async function runRecipientAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
 ) {
   const agent: AgentStatus = {
@@ -170,7 +170,7 @@ async function runRecipientAgent(
 }
 
 async function runLinkAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
 ) {
   const agent: AgentStatus = {
@@ -206,7 +206,7 @@ async function runLinkAgent(
 }
 
 async function runAttachmentAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
 ) {
   const agent: AgentStatus = {
@@ -235,7 +235,7 @@ async function runAttachmentAgent(
 }
 
 async function runKeywordAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
 ) {
   const agent: AgentStatus = {
@@ -267,7 +267,7 @@ async function runKeywordAgent(
 }
 
 async function runHeaderAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
 ) {
   const agent: AgentStatus = {
@@ -290,7 +290,9 @@ async function runHeaderAgent(
   }
 }
 
-async function runMLAgent(result: Omit<DefenseResult, "timestamp" | "_id">) {
+async function runMLAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
+) {
   const agent: AgentStatus = {
     id: "ml",
     name: "ML Classifier",
@@ -310,7 +312,9 @@ async function runMLAgent(result: Omit<DefenseResult, "timestamp" | "_id">) {
   });
 }
 
-function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
+function calculateFinalRisk(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
+) {
   result.overallRisk = Math.min(result.overallRisk, 100);
   result.severity =
     result.overallRisk >= 80
@@ -361,7 +365,7 @@ function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
 }
 
 function generateRemediationSteps(
-  result: Omit<DefenseResult, "timestamp" | "_id">
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
   result.remediationSteps = ["1. QUARANTINE EMAIL", "2. BLOCK SENDER"];
   if (result.severity === "critical") {
@@ -370,7 +374,7 @@ function generateRemediationSteps(
 }
 
 function addTimelineEvent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   event: string,
   agent: string
 ) {

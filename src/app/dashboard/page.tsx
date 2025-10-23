@@ -1,5 +1,4 @@
 import DashboardPage from "@/pages/DashboardPage";
 
-export default function Dashboard() {
-  return <DashboardPage />;
-}
+export const dynamic = "force-dynamic";
+export default DashboardPage;

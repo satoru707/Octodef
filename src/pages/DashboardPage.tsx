@@ -16,7 +16,6 @@ import { AGENTS } from "../lib/mockData";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSession } from "next-auth/react";
-import type { Session } from "next-auth";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
@@ -24,7 +23,6 @@ export default function DashboardPage() {
     AGENTS.map((agent) => ({ ...agent, status: "idle" as const, progress: 0 }))
   );
   const [result, setResult] = useState<DefenseResult | null>(null);
-  const [session, setSession] = useState<null | Session>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
@@ -36,7 +34,6 @@ export default function DashboardPage() {
         router.push("/auth/signin");
         return;
       }
-      setSession(session);
       console.log("Session", session);
       setLoading(false);
     }
@@ -60,7 +57,7 @@ export default function DashboardPage() {
         }))
       );
 
-      const agentDuration = 1000; 
+      const agentDuration = 1000;
 
       AGENTS.forEach((agent, index) => {
         setTimeout(() => {

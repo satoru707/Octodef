@@ -1,5 +1,4 @@
 import { ProfilePage } from "@/pages/ProfilePage";
 
-export default function Profile() {
-  return <ProfilePage />;
-}
+export const dynamic = "force-dynamic";
+export default ProfilePage;

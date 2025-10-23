@@ -8,8 +8,8 @@ const GOOGLE_SAFE_BROWSING_API_KEY =
 
 export async function analyzeThreat(
   input: string
-): Promise<Omit<DefenseResult, "timestamp" | "_id">> {
-  const result: Omit<DefenseResult, "timestamp" | "_id"> = {
+): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
+  const result: Omit<DefenseResult, "timestamp" | "_id" | "userId"> = {
     input: { type: "url", data: input },
     overallRisk: 0,
     severity: "low",
@@ -53,7 +53,7 @@ export async function analyzeThreat(
 }
 
 async function runLocalDetectorAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   input: string
 ) {
   const agentId = "local-detector";
@@ -138,7 +138,7 @@ async function runLocalDetectorAgent(
 }
 
 async function runVirusTotalAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   input: string
 ) {
   const agentId = "virustotal";
@@ -212,7 +212,9 @@ async function runVirusTotalAgent(
   }
 }
 
-function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
+function calculateFinalRisk(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
+) {
   result.overallRisk = Math.min(result.overallRisk, 100);
   if (result.overallRisk >= 80) result.severity = "critical";
   else if (result.overallRisk >= 60) result.severity = "high";
@@ -234,7 +236,7 @@ function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
 }
 
 function generateRemediationSteps(
-  result: Omit<DefenseResult, "timestamp" | "_id">
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
   const steps = [
     "1. Block access to flagged URLs",
@@ -248,7 +250,7 @@ function generateRemediationSteps(
 }
 
 function addTimelineEvent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   event: string,
   agent: string
 ) {

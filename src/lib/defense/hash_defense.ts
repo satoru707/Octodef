@@ -6,12 +6,12 @@ const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY || "";
 
 export async function analyzeThreat(
   input: string
-): Promise<Omit<DefenseResult, "timestamp" | "_id">> {
+): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
   console.time("HASH_ANALYSIS_SPEED");
 
   console.log(`🔍 Analyzing hash: ${input}`);
 
-  const result: Omit<DefenseResult, "timestamp" | "_id"> = {
+  const result: Omit<DefenseResult, "timestamp" | "_id" | "userId"> = {
     input: {
       type: "hash",
       data: input,
@@ -57,7 +57,7 @@ export async function analyzeThreat(
 }
 
 async function runVirusTotalAgent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   fileHash: string
 ) {
   const agentId = "virustotal";
@@ -159,7 +159,9 @@ async function runVirusTotalAgent(
   }
 }
 
-function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
+function calculateFinalRisk(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
+) {
   result.overallRisk = Math.min(result.overallRisk, 100);
 
   if (result.overallRisk >= 80) result.severity = "critical";
@@ -177,7 +179,7 @@ function calculateFinalRisk(result: Omit<DefenseResult, "timestamp" | "_id">) {
 }
 
 function generateRemediationSteps(
-  result: Omit<DefenseResult, "timestamp" | "_id">
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
   const steps = [
     "1. BLOCK this hash immediately",
@@ -197,7 +199,7 @@ function generateRemediationSteps(
 }
 
 function addTimelineEvent(
-  result: Omit<DefenseResult, "timestamp" | "_id">,
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   event: string,
   agent: string
 ) {
