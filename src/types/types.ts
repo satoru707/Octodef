@@ -25,7 +25,7 @@ export interface AgentStatus {
 }
 
 export interface DefenseResult {
-  _id: ObjectId;
+  _id: ObjectId | string;
   timestamp: string;
   input: ThreatInput;
   overallRisk: number;
@@ -41,7 +41,7 @@ export interface DefenseResult {
 
 export interface Finding {
   agent: string;
-  type: "info" | "warning" | "critical";
+  type: "info" | "warning" | "critical" | "error";
   message: string;
   details?: string;
 }

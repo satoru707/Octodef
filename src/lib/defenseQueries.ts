@@ -3,7 +3,6 @@ import { DefenseResult, DefenseSession, ThreatInput } from '../types/types';
 import { generateMockDefenseResult } from "../lib/mockData";
 import axios from "axios";
 
-// ✅ BUILD SAFETY: Skip queries during build
 const isClient = typeof window !== "undefined";
 
 const defendThreat = async (input: ThreatInput): Promise<DefenseResult> => {
@@ -36,7 +35,7 @@ const simulateAttack = async (): Promise<DefenseResult> => {
 };
 
 const fetchPastSessions = async (): Promise<DefenseSession[]> => {
-  const response = await axios.get(`/api/session`);
+  const response = await axios.get(`/api/defend`);
   const past_collections = response.data.map((col: DefenseResult) => ({
     _id: col._id,
     timestamp: col.timestamp,
@@ -56,7 +55,7 @@ const fetchSessionDetails = async (
 };
 
 const deleteSessions = async (sessionIds: string[]): Promise<void> => {
-  await axios.delete(`/api/session`, {
+  await axios.delete(`/api/defend`, {
     data: { sessionIds },
   });
 };
@@ -81,23 +80,21 @@ export const useSimulateAttackMutation = () => {
   });
 };
 
-// ✅ FIXED: SKIP DURING BUILD
 export const usePastSessions = () => {
   return useQuery({
     queryKey: ["pastSessions"],
     queryFn: fetchPastSessions,
     staleTime: 5 * 60 * 1000,
-    enabled: isClient, // ✅ BUILD SAFETY
+    enabled: isClient,
   });
 };
 
-// ✅ FIXED: SKIP DURING BUILD
 export const useSessionDetails = (id: string) => {
   return useQuery({
     queryKey: ["session", id],
     queryFn: () => fetchSessionDetails(id),
     staleTime: 10 * 60 * 1000,
-    enabled: isClient && !!id, // ✅ BUILD SAFETY
+    enabled: isClient && !!id,
   });
 };
 

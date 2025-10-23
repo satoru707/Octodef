@@ -1,14 +1,12 @@
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
 import { ThreatMapData } from '@/types/types';
-import { Shield } from "lucide-react";
+import { Shield } from "@phosphor-icons/react";
 
 interface ThreatGraphProps {
   data: ThreatMapData[];
 }
 
-// Transform data for proper radar chart
 const transformThreatData = (rawData: ThreatMapData[]) => {
-  // Base categories for radar chart (standard threat landscape)
   const categories = [
     "Local Detection",
     "Cloud Engines",
@@ -19,20 +17,17 @@ const transformThreatData = (rawData: ThreatMapData[]) => {
     "Social Engineering",
   ];
 
-  // Create full dataset with normalized values (0-100 scale)
   return categories.map((category) => {
     const rawItem = rawData.find((item) => item.category === category);
     const baseRisk = rawItem?.risk || 0;
     const baseThreats = rawItem?.threats || 0;
 
-    // Normalize to 0-100 scale for visual impact
     const normalizedRisk = Math.min((baseRisk + baseThreats * 5) * 10, 100);
 
     return {
       category,
       risk: normalizedRisk,
       threats: baseThreats,
-      // Add more metrics for fuller radar
       phishing: category === "Phishing" ? normalizedRisk : Math.random() * 20,
       malware: category === "Malware" ? normalizedRisk : Math.random() * 20,
       network: category === "Network" ? normalizedRisk : Math.random() * 20,

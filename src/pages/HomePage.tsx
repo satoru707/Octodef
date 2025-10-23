@@ -2,13 +2,14 @@
 import { useState, useEffect, useRef } from "react";
 import type { Session } from "next-auth";
 import Link from "next/link";
-import { Shield, Zap, Brain, Lock, CheckCircle2, Sparkles } from "lucide-react";
+import { Zap, Brain, Lock, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSession } from "next-auth/react";
 import { OctoDefenderLogo } from "@/components/OctoDefenderLogo";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { Shield } from "@phosphor-icons/react";
 
 export const HomePage = () => {
   const [session, setSession] = useState<Session | null>(null);

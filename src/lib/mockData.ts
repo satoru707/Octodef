@@ -43,9 +43,7 @@ export const AGENTS: Omit<AgentStatus, 'status' | 'progress' | 'result'>[] = [
   },
 ];
 
-export const generateMockDefenseResult = (
-  input: ThreatInput
-): Omit<DefenseResult, "_id"> => {
+export const generateMockDefenseResult = (input: ThreatInput): DefenseResult => {
   const risk = Math.floor(Math.random() * 100);
   const severity =
     risk < 30 ? "low" : risk < 60 ? "medium" : risk < 85 ? "high" : "critical";
@@ -133,9 +131,7 @@ export const generateMockDefenseResult = (
   }
 
   return {
-    // _id:
-    //   `def-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`// mongodb object id
-    // ,
+    _id: `def-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // mongodb object id
     timestamp: new Date().toISOString(),
     input,
     overallRisk: risk,

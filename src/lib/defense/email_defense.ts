@@ -3,6 +3,28 @@ export const runtime = "nodejs";
 import { simpleParser, ParsedMail } from "mailparser";
 import { DefenseResult, AgentStatus } from "@/types/types";
 
+const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY || "";
+const HA_API_KEY = process.env.HYBRIDANALYSIS_API_KEY || "";
+const MS_API_KEY = process.env.MALSHARE_API_KEY || "";
+const ABUSEIPDB_KEY = process.env.ABUSEIPDB_API_KEY || "";
+
+async function safeFetch(
+  url: string,
+  opts: RequestInit = {},
+  timeoutMs = 15000
+) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: controller.signal });
+    clearTimeout(t);
+    return res;
+  } catch (err) {
+    clearTimeout(t);
+    throw err;
+  }
+}
+
 export async function analyzeThreat(
   input: string | Buffer
 ): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
@@ -26,10 +48,11 @@ export async function analyzeThreat(
     status: "processing",
   };
 
-  addTimelineEvent(result, "8-Agent Email Analysis Started", "System");
+  addTimelineEvent(result, "9-Agent Email Analysis Started", "System");
 
   try {
     const parsedEmail = await simpleParser(input);
+
     await runSubjectAgent(result, parsedEmail);
     await runSenderAgent(result, parsedEmail);
     await runRecipientAgent(result, parsedEmail);
@@ -38,6 +61,7 @@ export async function analyzeThreat(
     await runKeywordAgent(result, parsedEmail);
     await runHeaderAgent(result, parsedEmail);
     await runMLAgent(result);
+    await runHashIntelAgent(result, parsedEmail);
 
     calculateFinalRisk(result);
     generateRemediationSteps(result);
@@ -56,7 +80,7 @@ export async function analyzeThreat(
     result.status = "failed";
     result.findings.push({
       agent: "System",
-      type: "critical" as const,
+      type: "critical",
       message: "Email analysis failed",
       details: (error as Error).message,
     });
@@ -266,6 +290,74 @@ async function runKeywordAgent(
   }
 }
 
+async function runVirusTotal(hash: string) {
+  if (!VT_API_KEY) return { error: "Missing VirusTotal API key" };
+  const url = `https://www.virustotal.com/api/v3/files/${encodeURIComponent(
+    hash
+  )}`;
+  const res = await safeFetch(url, { headers: { "x-apikey": VT_API_KEY } });
+  if (!res.ok) return { error: `HTTP ${res.status}` };
+  const data = await res.json();
+  const stats = data?.data?.attributes?.last_analysis_stats || {};
+  const positives = stats.malicious || 0;
+  const total =
+    Object.values(stats).reduce(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (a: number, b: any) => a + (typeof b === "number" ? b : 0),
+      0
+    ) || 1;
+  return { positives, total };
+}
+
+async function runHybridAnalysis(hash: string) {
+  if (!HA_API_KEY) return { error: "Missing HybridAnalysis API key" };
+  const url = "https://www.hybrid-analysis.com/api/v2/search/hash";
+  const body = new URLSearchParams({ hash });
+  const res = await safeFetch(url, {
+    method: "POST",
+    headers: {
+      "api-key": HA_API_KEY,
+      "user-agent": "DefenseSystem/1.0",
+      "content-type": "application/x-www-form-urlencoded",
+      accept: "application/json",
+    },
+    body: body.toString(),
+  });
+  if (!res.ok) return { error: `HTTP ${res.status}` };
+  const data = await res.json();
+  const sample = Array.isArray(data) && data.length ? data[0] : null;
+  return {
+    threat_score: sample?.threat_score || 0,
+    verdict: sample?.verdict || "",
+  };
+}
+
+async function runMalShare(hash: string) {
+  if (!MS_API_KEY) return { error: "Missing MalShare API key" };
+  const url = `https://malshare.com/api.php?api_key=${encodeURIComponent(
+    MS_API_KEY
+  )}&action=details&hash=${encodeURIComponent(hash)}`;
+  const res = await safeFetch(url);
+  const txt = await res.text();
+  if (!res.ok) return { error: `HTTP ${res.status}` };
+  if (txt.includes("HASH NOT FOUND")) return { found: false };
+  return { found: true, meta: txt.slice(0, 120) };
+}
+
+function calculateFinalRisk(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
+) {
+  result.overallRisk = Math.min(result.overallRisk, 100);
+  result.severity =
+    result.overallRisk >= 80
+      ? "critical"
+      : result.overallRisk >= 60
+      ? "high"
+      : result.overallRisk >= 30
+      ? "medium"
+      : "low";
+}
+
 async function runHeaderAgent(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   email: ParsedMail
@@ -290,6 +382,124 @@ async function runHeaderAgent(
   }
 }
 
+async function runHashIntelAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
+  email: ParsedMail
+) {
+  const agent: AgentStatus = {
+    id: "hash-intel",
+    name: "Hash Intelligence",
+    description: "Threat hash enrichment using VT, HA, MS, AbuseIPDB",
+    status: "complete",
+    progress: 100,
+  };
+  result.agents.push(agent);
+  addTimelineEvent(result, "Hash enrichment started", agent.name);
+
+  const body = ((email.text || "") + " " + (email.html || "")).toLowerCase();
+  const hashes = Array.from(body.matchAll(/\b[a-f0-9]{32,64}\b/g)).map(
+    (m) => m[0]
+  );
+  const ips = Array.from(body.matchAll(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g)).map(
+    (m) => m[0]
+  );
+  if (hashes.length === 0 && ips.length === 0) return;
+
+  for (const hash of hashes.slice(0, 5)) {
+    const vt = await runVirusTotal(hash);
+    const ha = await runHybridAnalysis(hash);
+    const ms = await runMalShare(hash);
+
+    if (vt.error)
+      result.findings.push({
+        agent: agent.name,
+        type: "warning",
+        message: "VirusTotal error",
+        details: vt.error,
+      });
+    else if (vt.positives > 0) {
+      result.findings.push({
+        agent: agent.name,
+        type: "critical",
+        message: `VT detections: ${vt.positives}/${vt.total}`,
+        details: `https://www.virustotal.com/gui/file/${hash}`,
+      });
+      result.overallRisk += Math.min(vt.positives * 3, 30);
+    }
+
+    if (ha.error)
+      result.findings.push({
+        agent: agent.name,
+        type: "warning",
+        message: "HybridAnalysis error",
+        details: ha.error,
+      });
+    else if (ha.threat_score > 0) {
+      result.findings.push({
+        agent: agent.name,
+        type: "warning",
+        message: `Hybrid score ${ha.threat_score}`,
+        details: ha.verdict || "",
+      });
+      result.overallRisk += Math.min(ha.threat_score * 0.6, 25);
+    }
+
+    if (ms.error)
+      result.findings.push({
+        agent: agent.name,
+        type: "warning",
+        message: "MalShare error",
+        details: ms.error,
+      });
+    else if (ms.found) {
+      result.findings.push({
+        agent: agent.name,
+        type: "warning",
+        message: "Found in MalShare",
+        details: ms.meta || "",
+      });
+      result.overallRisk += 15;
+    }
+  }
+
+  if (ips.length && ABUSEIPDB_KEY) {
+    for (const ip of ips.slice(0, 5)) {
+      try {
+        const url = `https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}&maxAgeInDays=90`;
+        const res = await safeFetch(url, {
+          headers: { Key: ABUSEIPDB_KEY, Accept: "application/json" },
+        });
+        const data = await res.json();
+        const score = data?.data?.abuseConfidenceScore || 0;
+        if (score >= 60)
+          result.findings.push({
+            agent: agent.name,
+            type: "critical",
+            message: `High-risk IP ${ip}`,
+            details: `Score ${score}`,
+          });
+        else if (score >= 30)
+          result.findings.push({
+            agent: agent.name,
+            type: "warning",
+            message: `Medium-risk IP ${ip}`,
+            details: `Score ${score}`,
+          });
+        result.overallRisk += Math.min(score * 0.3, 20);
+      } catch (err) {
+        result.findings.push({
+          agent: agent.name,
+          type: "warning",
+          message: `AbuseIPDB failed for ${ip}`,
+          details: String(err),
+        });
+      }
+    }
+  }
+
+  addTimelineEvent(result, "Hash intel analysis complete", agent.name);
+}
+
 async function runMLAgent(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
@@ -312,58 +522,6 @@ async function runMLAgent(
   });
 }
 
-function calculateFinalRisk(
-  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
-) {
-  result.overallRisk = Math.min(result.overallRisk, 100);
-  result.severity =
-    result.overallRisk >= 80
-      ? "critical"
-      : result.overallRisk >= 60
-      ? "high"
-      : result.overallRisk >= 30
-      ? "medium"
-      : "low";
-
-  result.threatMap = [
-    {
-      category: "Subject",
-      risk: Math.min(result.overallRisk * 0.15, 15),
-      threats: 1,
-    },
-    {
-      category: "Sender",
-      risk: Math.min(result.overallRisk * 0.2, 20),
-      threats: 1,
-    },
-    {
-      category: "Links",
-      risk: Math.min(result.overallRisk * 0.25, 25),
-      threats: 1,
-    },
-    {
-      category: "Attachments",
-      risk: Math.min(result.overallRisk * 0.2, 20),
-      threats: 1,
-    },
-    {
-      category: "Keywords",
-      risk: Math.min(result.overallRisk * 0.1, 10),
-      threats: 1,
-    },
-    {
-      category: "Headers",
-      risk: Math.min(result.overallRisk * 0.05, 5),
-      threats: 1,
-    },
-    {
-      category: "ML",
-      risk: Math.min(result.overallRisk * 0.05, 5),
-      threats: 1,
-    },
-  ];
-}
-
 function generateRemediationSteps(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
@@ -372,6 +530,7 @@ function generateRemediationSteps(
     result.remediationSteps.push("3. IMMEDIATE ALERT", "4. SCAN NETWORK");
   }
 }
+
 
 function addTimelineEvent(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,

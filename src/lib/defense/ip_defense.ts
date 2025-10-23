@@ -5,13 +5,7 @@ import {
   ClientResponse,
   APICheckEndpointResponse,
 } from "abuseipdb-client";
-import {
-  DefenseResult,
-  AgentStatus,
-  Finding,
-  ThreatMapData,
-  TimelineEvent,
-} from "@/types/types";
+import { DefenseResult, AgentStatus } from "@/types/types";
 import countriesData from "@/lib/data/country.json" assert { type: "json" };
 
 const ABUSEIPDB_API_KEY = process.env.ABUSEIPDB_API_KEY || "";
@@ -27,10 +21,10 @@ export async function analyzeThreat(
     overallRisk: 0,
     severity: "low",
     agents: [],
-    findings: [] as Finding[],
+    findings: [],
     remediationSteps: [],
-    threatMap: [] as ThreatMapData[],
-    timeline: [] as TimelineEvent[],
+    threatMap: [],
+    timeline: [],
     status: "processing",
   };
   addTimelineEvent(result, "IP Analysis Started", "System");
@@ -39,7 +33,12 @@ export async function analyzeThreat(
     await Promise.all([
       runGeoIPAgent(result, input),
       runAbuseIPDBAgent(result, input),
+      runAbuseCHAgent(result, input),
+      runSpamhausAgent(result, input),
+      runMalShareAgent(result, input),
+      runHybridAnalysisAgent(result, input),
     ]);
+
     calculateFinalRisk(result);
     generateRemediationSteps(result);
     result.status = "complete";
@@ -47,23 +46,12 @@ export async function analyzeThreat(
     return result;
   } catch (error: unknown) {
     result.status = "failed";
-    addTimelineEvent(
-      result,
-      `Analysis Failed: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`,
-      "System"
-    );
-
-    result.overallRisk = 0;
-    result.severity = "low";
     result.findings.push({
       agent: "System",
-      type: "warning" as const,
+      type: "warning",
       message: "IP analysis failed - marked as safe by default",
       details: error instanceof Error ? error.message : "Unknown error",
     });
-
     return result;
   }
 }
@@ -72,20 +60,18 @@ async function runGeoIPAgent(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   input: string
 ) {
-  const agentId = "geoip-json";
   const agent: AgentStatus = {
-    id: agentId,
+    id: "geoip-json",
     name: "GeoIP JSON Database",
-    description: "1ms instant country lookup (500+ IPs)",
+    description: "1ms instant country lookup",
     status: "processing",
     progress: 0,
   };
   result.agents.push(agent);
-  addTimelineEvent(result, "JSON GeoIP started", agent.name);
+  addTimelineEvent(result, "GeoIP started", agent.name);
 
   try {
     agent.progress = 100;
-
     let countryCode = "UNKNOWN";
     for (const [code, ips] of Object.entries(countriesData)) {
       if (ips.includes(input)) {
@@ -95,35 +81,28 @@ async function runGeoIPAgent(
     }
     agent.status = "complete";
     agent.result = JSON.stringify({ country: countryCode });
-
-    const details = `Country: ${countryCode}`;
     result.findings.push({
       agent: agent.name,
-      type: "info" as const,
-      message: "IP country resolved instantly",
-      details,
+      type: "info",
+      message: "Country resolved",
+      details: `Country: ${countryCode}`,
     });
-    addTimelineEvent(result, `Country: ${countryCode}`, agent.name);
-
-    const highRiskCountries = ["RU", "CN", "KP", "IR", "SY"];
-    if (highRiskCountries.includes(countryCode)) {
-      result.overallRisk += 20;
+    const risky = ["RU", "CN", "KP", "IR", "SY"];
+    if (risky.includes(countryCode)) {
+      result.overallRisk += 15;
       result.findings.push({
         agent: agent.name,
-        type: "warning" as const,
-        message: "IP from high-risk country",
+        type: "warning",
+        message: "High-risk geo location",
         details: `Country code: ${countryCode}`,
       });
     }
   } catch (error) {
     agent.status = "error";
-    agent.result = `Error: ${
-      error instanceof Error ? error.message : "Unknown error"
-    }`;
     result.findings.push({
       agent: agent.name,
-      type: "warning" as const,
-      message: "JSON GeoIP failed",
+      type: "warning",
+      message: "GeoIP lookup failed",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
@@ -133,93 +112,263 @@ async function runAbuseIPDBAgent(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
   input: string
 ) {
-  const agentId = "abuseipdb";
   const agent: AgentStatus = {
-    id: agentId,
+    id: "abuseipdb",
     name: "AbuseIPDB Reputation",
     description: "Live abuse reports",
     status: "processing",
     progress: 0,
   };
-
   result.agents.push(agent);
-  addTimelineEvent(result, "Reputation check started", agent.name);
+  addTimelineEvent(result, "AbuseIPDB check started", agent.name);
 
   if (!abuseClient) {
-    agent.progress = 100;
     agent.status = "error";
-    agent.result = "No API key configured";
     result.findings.push({
       agent: agent.name,
-      type: "warning" as const,
-      message: "AbuseIPDB skipped - no API key",
+      type: "warning",
+      message: "No API key configured for AbuseIPDB",
     });
     return;
   }
 
   try {
-    agent.progress = 50;
-
     const response: ClientResponse<APICheckEndpointResponse> =
       await abuseClient.check(input, { maxAgeInDays: 90 });
 
-    agent.progress = 100;
+    const data = response?.result?.data;
     agent.status = "complete";
-    agent.result = JSON.stringify(response);
+    agent.result = JSON.stringify(data);
 
-    if (!response.result) {
-      result.findings.push({
-        agent: agent.name,
-        type: "warning" as const,
-        message: "AbuseIPDB check failed",
-      });
-      return;
-    }
+    if (!data) throw new Error("No AbuseIPDB result");
 
-    const { abuseConfidenceScore, totalReports, reports } =
-      response.result.data || {};
-
-    const categoryNumbers =
-      reports?.flatMap((report) => report.categories) || [];
-    const categoryNames = parseAbuseCategories(categoryNumbers);
-
-    const details = `Confidence: ${abuseConfidenceScore}%, Reports: ${totalReports}`;
-
+    const { abuseConfidenceScore, totalReports } = data;
     if (abuseConfidenceScore > 0) {
-      const riskBoost = Math.min(abuseConfidenceScore, 80);
-      result.overallRisk += riskBoost;
-
-      const findingType =
-        abuseConfidenceScore > 50
-          ? ("critical" as const)
-          : ("warning" as const);
+      result.overallRisk += Math.min(abuseConfidenceScore, 80);
       result.findings.push({
         agent: agent.name,
-        type: findingType,
-        message: `IP has abuse history (${abuseConfidenceScore}%)`,
-        details: `${details}. Categories: ${
-          categoryNames.join(", ") || "None"
-        }`,
+        type: abuseConfidenceScore > 50 ? "critical" : "warning",
+        message: `IP has ${abuseConfidenceScore}% abuse score`,
+        details: `${totalReports} total reports`,
       });
-      addTimelineEvent(result, `${totalReports} abuse reports`, agent.name);
     } else {
       result.findings.push({
         agent: agent.name,
-        type: "info" as const,
-        message: `IP clean (${totalReports || 0} reports)`,
-        details,
+        type: "info",
+        message: "IP clean",
       });
     }
-  } catch (error: unknown) {
+  } catch (error) {
     agent.status = "error";
-    agent.progress = 100;
-    agent.result = `Error: ${
-      error instanceof Error ? error.message : "Unknown error"
-    }`;
     result.findings.push({
       agent: agent.name,
-      type: "warning" as const,
-      message: "AbuseIPDB failed",
+      type: "warning",
+      message: "AbuseIPDB fetch failed",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+async function runAbuseCHAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
+  input: string
+) {
+  const agent: AgentStatus = {
+    id: "abusech",
+    name: "Abuse.ch FeodoTracker",
+    description: "C2 tracker database",
+    status: "processing",
+    progress: 0,
+  };
+  result.agents.push(agent);
+
+  try {
+    const res = await fetch(
+      `https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.json`
+    );
+    const list = await res.json();
+    const found = list.find(
+      (e: Omit<DefenseResult, "timestamp" | "_id" | "userId">) =>
+        e.input.data === input
+    );
+
+    if (found) {
+      result.overallRisk += 25;
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "critical",
+        message: "IP found in FeodoTracker list",
+        details: `Malware family: ${found.malware || "unknown"}`,
+      });
+    } else {
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "info",
+        message: "Not in FeodoTracker",
+      });
+    }
+  } catch (error) {
+    agent.status = "error";
+    result.findings.push({
+      agent: agent.name,
+      type: "warning",
+      message: "FeodoTracker failed",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+// SPAMHAUS DROP
+async function runSpamhausAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
+  input: string
+) {
+  const agent: AgentStatus = {
+    id: "spamhaus",
+    name: "Spamhaus DROP List",
+    description: "Known botnet & spam IPs",
+    status: "processing",
+    progress: 0,
+  };
+  result.agents.push(agent);
+
+  try {
+    const res = await fetch("https://www.spamhaus.org/drop/drop.txt");
+    const text = await res.text();
+    const found = text.includes(input);
+
+    if (found) {
+      result.overallRisk += 20;
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "critical",
+        message: "IP found in Spamhaus DROP",
+      });
+    } else {
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "info",
+        message: "Not in Spamhaus DROP",
+      });
+    }
+  } catch (error) {
+    agent.status = "error";
+    result.findings.push({
+      agent: agent.name,
+      type: "warning",
+      message: "Spamhaus fetch failed",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+async function runMalShareAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
+  input: string
+) {
+  const agent: AgentStatus = {
+    id: "malshare",
+    name: "MalShare IP Intel",
+    description: "Open malware repository",
+    status: "processing",
+    progress: 0,
+  };
+  result.agents.push(agent);
+
+  try {
+    const apiKey = process.env.MALSHARE_API_KEY;
+    if (!apiKey) throw new Error("Missing MALSHARE_API_KEY");
+
+    const res = await fetch(
+      `https://malshare.com/api.php?api_key=${apiKey}&action=search&query=${input}`
+    );
+    const text = await res.text();
+    if (text.includes("No results")) {
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "info",
+        message: "No matches in MalShare",
+      });
+    } else {
+      result.overallRisk += 15;
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "warning",
+        message: "IP found in MalShare index",
+      });
+    }
+  } catch (error) {
+    agent.status = "error";
+    result.findings.push({
+      agent: agent.name,
+      type: "warning",
+      message: "MalShare query failed",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+async function runHybridAnalysisAgent(
+  result: Omit<DefenseResult, "timestamp" | "_id" | "userId">,
+  input: string
+) {
+  const agent: AgentStatus = {
+    id: "hybridanalysis",
+    name: "Hybrid Analysis",
+    description: "Sandbox network indicator lookup",
+    status: "processing",
+    progress: 0,
+  };
+  result.agents.push(agent);
+
+  try {
+    const apiKey = process.env.HYBRIDANALYSIS_API_KEY;
+    if (!apiKey) throw new Error("Missing HYBRID_API_KEY");
+
+    const res = await fetch(
+      "https://www.hybrid-analysis.com/api/v2/search/hash",
+      {
+        method: "POST",
+        headers: {
+          "api-key": apiKey,
+          Accept: "application/json",
+          "User-Agent": "Falcon Sandbox",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ query: input }),
+      }
+    );
+
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      result.overallRisk += 25;
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "warning",
+        message: "IP seen in HybridAnalysis reports",
+        details: `Samples: ${data.length}`,
+      });
+    } else {
+      agent.status = "complete";
+      result.findings.push({
+        agent: agent.name,
+        type: "info",
+        message: "No HybridAnalysis records",
+      });
+    }
+  } catch (error) {
+    agent.status = "error";
+    result.findings.push({
+      agent: agent.name,
+      type: "warning",
+      message: "HybridAnalysis lookup failed",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
@@ -229,40 +378,33 @@ function calculateFinalRisk(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
   result.overallRisk = Math.min(result.overallRisk, 100);
-
-  if (result.overallRisk >= 80) result.severity = "critical";
-  else if (result.overallRisk >= 60) result.severity = "high";
-  else if (result.overallRisk >= 30) result.severity = "medium";
-  else result.severity = "low";
+  result.severity =
+    result.overallRisk >= 80
+      ? "critical"
+      : result.overallRisk >= 60
+      ? "high"
+      : result.overallRisk >= 30
+      ? "medium"
+      : "low";
 
   result.threatMap = [
-    {
-      category: "GeoIP Location",
-      risk: Math.min(result.overallRisk * 0.3, 30),
-      threats: 1,
-    },
-    {
-      category: "Abuse Reports",
-      risk: Math.min(result.overallRisk * 0.7, 70),
-      threats: result.overallRisk > 0 ? 1 : 0,
-    },
+    { category: "GeoIP", risk: result.overallRisk * 0.2, threats: 1 },
+    { category: "Reputation", risk: result.overallRisk * 0.5, threats: 1 },
+    { category: "Malware Intel", risk: result.overallRisk * 0.3, threats: 1 },
   ];
 }
 
 function generateRemediationSteps(
   result: Omit<DefenseResult, "timestamp" | "_id" | "userId">
 ) {
-  const steps = [
-    "1. Block IP at firewall level",
-    "2. Monitor network traffic from this IP",
-    "3. Investigate related logs",
+  const base = [
+    "1. Block IP in firewall immediately",
+    "2. Monitor inbound/outbound traffic",
+    "3. Correlate with related IOC indicators",
   ];
-
-  if (result.severity === "critical") {
-    steps.push("4. Immediate quarantine", "5. Report to ISP");
-  }
-
-  result.remediationSteps = steps;
+  if (result.severity === "critical")
+    base.push("4. Quarantine affected systems", "5. Notify security team");
+  result.remediationSteps = base;
 }
 
 function addTimelineEvent(
@@ -275,23 +417,6 @@ function addTimelineEvent(
     agent,
     event,
   });
-}
-
-function parseAbuseCategories(categories: number[]): string[] {
-  const catMap: { [key: number]: string } = {
-    10: "Abuse service",
-    11: "Email spam",
-    12: "Attack services",
-    14: "Web spam",
-    18: "Internet scanner",
-    19: "Phishing",
-    20: "Port scan",
-    21: "Exploit",
-    22: "Brute-force",
-    23: "DDoS attack",
-    24: "Malware",
-  };
-  return categories.map((cat) => catMap[cat] || `Category ${cat}`);
 }
 
 export default analyzeThreat;

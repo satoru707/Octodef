@@ -1,5 +1,6 @@
-import { Shield, Cpu, Zap, Lock, Brain, Eye, Bell, Cog } from "lucide-react";
+import { Cpu, Zap, Lock, Brain, Eye, Bell, Cog } from "lucide-react";
 import { OctoDefenderLogo } from "@/components/OctoDefenderLogo";
+import { Shield } from "@phosphor-icons/react";
 
 export const AboutPage = () => {
   const agents = [

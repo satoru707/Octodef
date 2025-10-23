@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Calendar, Shield, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Calendar, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import { ErrorMessage } from "@/components/ErrorMessage";
 import { getSession } from "next-auth/react";
 import { toast } from "sonner";
 import { SessionProps } from "@/types/types";
+import { Shield } from "@phosphor-icons/react";
 
 export const ProfilePage = () => {
   const [session, setSession] = useState<SessionProps | null>(null);
@@ -152,7 +153,6 @@ export const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-black pt-24 pb-12">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Profile Header */}
         <div className="mb-8">
           <h1 className="text-4xl text-white mb-2">Profile</h1>
           <p className="text-gray-400">
@@ -160,7 +160,6 @@ export const ProfilePage = () => {
           </p>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="bg-[#111] border-[#1e3a8a]/30 md:col-span-1">
             <CardHeader className="text-center">
@@ -224,7 +223,6 @@ export const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Defense History */}
         <Card className="bg-[#111] border-[#1e3a8a]/30">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -282,7 +280,6 @@ export const ProfilePage = () => {
 
             {sessions && sessions.length > 0 && (
               <>
-                {/* 🚀 SELECTION TOOLBAR - Slides down */}
                 {selectionMode && (
                   <div
                     className={`
@@ -342,7 +339,6 @@ export const ProfilePage = () => {
                   </div>
                 )}
 
-                {/* Sessions List */}
                 <div className="space-y-3">
                   {sessions.map((sessionItem) => {
                     const isSelected = selectedSessions.has(sessionItem._id);
@@ -362,7 +358,6 @@ export const ProfilePage = () => {
                         `}
                       >
                         <label className="flex items-start justify-between gap-4 w-full">
-                          {/* Checkbox */}
                           {selectionMode && (
                             <div className="flex-shrink-0 mt-0.5">
                               <input
@@ -379,7 +374,6 @@ export const ProfilePage = () => {
                             </div>
                           )}
 
-                          {/* Session Content */}
                           <div
                             className="flex-1 min-w-0 cursor-pointer"
                             onClick={() => {
@@ -418,7 +412,6 @@ export const ProfilePage = () => {
                             </p>
                           </div>
 
-                          {/* Risk Score */}
                           {sessionItem.overallRisk !== undefined && (
                             <div
                               className={`text-right flex-shrink-0 transition-colors duration-200 ${
@@ -448,7 +441,6 @@ export const ProfilePage = () => {
         </Card>
       </div>
 
-      {/* 🚀 CONFIRMATION MODAL */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div
@@ -457,7 +449,6 @@ export const ProfilePage = () => {
             transform scale-100 transition-all duration-200
           `}
           >
-            {/* Header */}
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-500/10 rounded-lg">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -472,14 +463,12 @@ export const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Description */}
             <p className="text-gray-300 mb-6 text-sm">
               Are you sure you want to permanently delete these{" "}
               {selectedSessions.size}
               defense sessions from your history?
             </p>
 
-            {/* Footer */}
             <div className="flex gap-3 justify-end pt-4">
               <Button
                 variant="outline"
