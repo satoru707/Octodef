@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,16 +11,11 @@ import { toast } from "sonner";
 import { SiGoogle, SiGithub, SiX } from "react-icons/si";
 import { OctoDefenderLogo } from "@/components/OctoDefenderLogo";
 
-export default function SignInPage() {
-  const router = useRouter();
+function SearchParamsHandler() {
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
-  const [provider, setProvider] = useState<"google" | "github" | "twitter">("google");
   const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  useEffect(() => setIsClient(true), []);
 
   useEffect(() => {
     if (!isClient || !searchParams) return;
@@ -47,13 +44,21 @@ export default function SignInPage() {
     }
   }, [searchParams, isClient]);
 
+  return null;
+}
+
+export default function SignInPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [provider, setProvider] = useState<"google" | "github" | "twitter">(
+    "google"
+  );
+
   useEffect(() => {
     const verifySession = async () => {
       try {
         const session = await getSession();
-        if (session?.user) {
-          router.push("/dashboard");
-        }
+        if (session?.user) router.push("/dashboard");
       } catch (err) {
         console.error("Session check failed:", err);
       }
@@ -66,7 +71,7 @@ export default function SignInPage() {
       setProvider(provider);
       setIsLoading(true);
       await signIn(provider, { redirectTo: "/dashboard" });
-      toast.success(`Redirecting...`);
+      toast.success("Redirecting...");
     } catch (error) {
       console.error(error);
       toast.error("Failed to sign in. Please try again.");
@@ -94,6 +99,10 @@ export default function SignInPage() {
         </div>
 
         <div className="bg-[#111] border border-[#1e3a8a]/30 rounded-lg p-8 space-y-4">
+          <Suspense fallback={null}>
+            <SearchParamsHandler />
+          </Suspense>
+
           <Button
             onClick={() => handleSignIn("google")}
             disabled={isLoading}

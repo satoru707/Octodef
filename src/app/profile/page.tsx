@@ -1,4 +1,8 @@
-import { ProfilePage } from "@/pages/ProfilePage";
-
+"use client";
 export const dynamic = "force-dynamic";
-export default ProfilePage;
+
+import { ProfilePage } from "@/app/pages/ProfilePage";
+
+export default function Profile() {
+  return <ProfilePage />;
+}

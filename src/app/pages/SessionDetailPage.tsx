@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -7,7 +8,7 @@ import { ResultsCard } from "@/components/ResultsCard";
 import { ThreatGraph } from "@/components/ThreatGraph";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorMessage } from "@/components/ErrorMessage";
-import { useSessionDetails } from "../lib/defenseQueries";
+import { useSessionDetails } from "@/hooks/defenseQueries";
 
 export const SessionDetailPage = ({ id }: { id: string }) => {
   const router = useRouter();

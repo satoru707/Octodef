@@ -1,4 +1,8 @@
-import DashboardPage from "@/pages/DashboardPage";
-
+"use client";
 export const dynamic = "force-dynamic";
-export default DashboardPage;
+
+import DashboardPage from "@/app/pages/DashboardPage";
+
+export default function Dashboard() {
+  return <DashboardPage />;
+}

@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import { ThreatInputForm } from "@/components/ThreatInputForm";
@@ -10,9 +11,9 @@ import { AttackSimulation3D } from "@/components/AttackSimulation3D";
 import {
   useDefendMutation,
   useSimulateAttackMutation,
-} from "../lib/defenseQueries";
-import { ThreatInput, AgentStatus, DefenseResult } from "../types/types";
-import { AGENTS } from "../lib/mockData";
+} from "@/hooks/defenseQueries";
+import { ThreatInput, AgentStatus, DefenseResult } from "@/types/types";
+import { AGENTS } from "@/lib/mockData";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSession } from "next-auth/react";
@@ -34,7 +35,6 @@ export default function DashboardPage() {
         router.push("/auth/signin");
         return;
       }
-      console.log("Session", session);
       setLoading(false);
     }
     fetchSession();
@@ -109,7 +109,6 @@ export default function DashboardPage() {
   }, [simulateMutation.isSuccess, simulateMutation.data]);
 
   const handleDefend = (input: ThreatInput) => {
-    console.log("Input", input);
     defendMutation.mutate(input);
   };
 

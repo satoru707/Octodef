@@ -9,13 +9,9 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["mongodb"],
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
-
   output: "standalone",
 };
 

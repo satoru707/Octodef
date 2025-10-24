@@ -1,10 +1,9 @@
 import { MongoClient, ServerApiVersion } from "mongodb";
+import type { DefenseResult, User } from "@/types/types";
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
-}
+const uri = process.env.MONGODB_URI!;
+if (!uri) throw new Error("Missing MONGODB_URI environment variable");
 
-const uri = process.env.MONGODB_URI;
 const options = {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -16,16 +15,16 @@ const options = {
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
-if (process.env.NODE_ENV === "development") {
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
+declare global {
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
 
-  if (!globalWithMongo._mongoClientPromise) {
+if (process.env.NODE_ENV === "development") {
+  if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+    global._mongoClientPromise = client.connect();
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
+  clientPromise = global._mongoClientPromise;
 } else {
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
@@ -33,4 +32,15 @@ if (process.env.NODE_ENV === "development") {
 
 export default clientPromise;
 
-export const db = (await clientPromise).db("octodef");
+export async function getDb() {
+  const client = await clientPromise;
+  return client.db("octodef");
+}
+
+export async function getCollections() {
+  const db = await getDb();
+  return {
+    defenseResultCollection: db.collection<DefenseResult>("defenseResults"),
+    userCollection: db.collection<User>("users"),
+  };
+}

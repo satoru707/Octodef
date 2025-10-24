@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DefenseResult, DefenseSession, ThreatInput } from '../types/types';
+"use client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DefenseResult, DefenseSession, ThreatInput } from "../types/types";
 import { generateMockDefenseResult } from "../lib/mockData";
 import axios from "axios";
 

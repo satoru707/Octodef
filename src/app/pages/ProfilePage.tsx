@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
 import { Calendar, Trash2, AlertTriangle, Loader2 } from "lucide-react";
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { usePastSessions, useDeleteSessions } from "../lib/defenseQueries";
+import { usePastSessions, useDeleteSessions } from "@/hooks/defenseQueries";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { getSession } from "next-auth/react";

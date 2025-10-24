@@ -23,16 +23,17 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: {
     default: "OctoDef — Cybersecurity Defense Simulator",
-    template: "%s | OctoDef"
+    template: "%s | OctoDef",
   },
-  description: "A next-gen cybersecurity defense simulator inspired by the intelligence of the octopus.",
+  description:
+    "A next-gen cybersecurity defense simulator inspired by the intelligence of the octopus.",
   keywords: [
     "Cybersecurity",
     "Simulator",
     "AI Defense",
     "Ethical Hacking",
     "OctoDef",
-    "Network Security"
+    "Network Security",
   ],
   authors: [{ name: "Praise Olaoye", url: "https://github.com/satoru707" }],
   creator: "Praise Olaoye",
@@ -41,7 +42,8 @@ export const metadata: Metadata = {
 
   openGraph: {
     title: "OctoDef — Cybersecurity Defense Simulator",
-    description: "Train your digital defense instincts through an immersive simulation inspired by the octopus.",
+    description:
+      "Train your digital defense instincts through an immersive simulation inspired by the octopus.",
     url: "http://localhost:3000/",
     siteName: "OctoDef",
     images: [
@@ -49,8 +51,8 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "OctoDef - Cybersecurity Defense Simulator"
-      }
+        alt: "OctoDef - Cybersecurity Defense Simulator",
+      },
     ],
     locale: "en_US",
     type: "website",
@@ -61,13 +63,13 @@ export const metadata: Metadata = {
     title: "OctoDef — Cybersecurity Defense Simulator",
     description: "Defend, analyze, and evolve — inspired by the octopus.",
     creator: "@iampraiez",
-    images: ["/og-image.png"]
+    images: ["/og-image.png"],
   },
 
   icons: {
-    icon: "/icon.svg", 
+    icon: "/icon.svg",
     shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png"
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -78,10 +80,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
-      >
-        <QueryProvider>
+      <QueryProvider>
+        <body
+          className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
+        >
           <div className="dark min-h-screen flex flex-col bg-black">
             <Header />
             <main className="flex-1">{children}</main>
@@ -97,8 +99,8 @@ export default function RootLayout({
               }}
             />
           </div>
-        </QueryProvider>
-      </body>
+        </body>
+      </QueryProvider>
     </html>
   );
 }

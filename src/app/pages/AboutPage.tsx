@@ -1,3 +1,5 @@
+"use client";
+
 import { Cpu, Zap, Lock, Brain, Eye, Bell, Cog } from "lucide-react";
 import { OctoDefenderLogo } from "@/components/OctoDefenderLogo";
 import { Shield } from "@phosphor-icons/react";
