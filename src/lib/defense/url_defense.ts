@@ -2,9 +2,9 @@ export const runtime = "nodejs";
 
 import { DefenseResult, AgentStatus } from "@/types/types";
 
-const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY || "";
+const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY! || "";
 const GOOGLE_SAFE_BROWSING_API_KEY =
-  process.env.GOOGLE_SAFE_BROWSING_API_KEY || "";
+  process.env.GOOGLE_SAFE_BROWSING_API_KEY! || "";
 
 export async function analyzeThreat(
   input: string

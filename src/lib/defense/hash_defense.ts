@@ -6,10 +6,10 @@ type VTv3Response = Record<string, unknown> | undefined;
 type HybridAnalysisResponse = unknown;
 type MalShareResponse = string | undefined;
 
-const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY || "";
-const HA_API_KEY = process.env.HYBRIDANALYSIS_API_KEY || "";
-const ABUSEIPDB_KEY = process.env.ABUSEIPDB_API_KEY || "";
-const MALSHARE_KEY = process.env.MALSHARE_API_KEY || "";
+const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY! || "";
+const HA_API_KEY = process.env.HYBRIDANALYSIS_API_KEY! || "";
+const ABUSEIPDB_KEY = process.env.ABUSEIPDB_API_KEY! || "";
+const MALSHARE_KEY = process.env.MALSHARE_API_KEY! || "";
 
 const ABUSEIPDB_CACHE_MS = 10 * 60 * 1000;
 const abuseCache = new Map<
@@ -55,8 +55,6 @@ function isValidIP(ip: string) {
 export async function analyzeThreat(
   input: string
 ): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
-  console.time("HASH_ANALYSIS_SPEED");
-
   const result: Omit<DefenseResult, "timestamp" | "_id" | "userId"> = {
     input: { type: "hash", data: input },
     overallRisk: 0,
@@ -101,10 +99,8 @@ export async function analyzeThreat(
 
     result.status = "complete";
     addTimelineEvent(result, "Hash Analysis Complete", "System");
-    console.timeEnd("HASH_ANALYSIS_SPEED");
     return result;
   } catch (err: unknown) {
-    console.timeEnd("HASH_ANALYSIS_SPEED");
     result.status = "failed";
     result.findings.push({
       agent: "System",

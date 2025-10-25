@@ -3,13 +3,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { Session } from "@/types/types";
-import {
-  analyzeURL,
-  analyzeIP,
-  analyzeHash,
-  analyzeLog,
-  analyzeEmail,
-} from "@/lib/defense";
+import { analyzeThreat } from "@/lib/defense_orcestrator";
 import { ObjectId } from "mongodb";
 import { getCollections } from "@/lib/db";
 
@@ -25,8 +19,7 @@ export async function GET() {
       .toArray();
 
     return NextResponse.json(results);
-  } catch (error) {
-    console.error("Error fetching results:", error);
+  } catch {
     return NextResponse.json(
       { error: "Error fetching results" },
       { status: 500 }
@@ -40,45 +33,22 @@ export async function POST(req: NextRequest) {
     const { user } = (await auth()) as Session;
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    let resultData;
-    switch (type) {
-      case "url":
-        resultData = await analyzeURL(data);
-        break;
-      case "ip":
-        resultData = await analyzeIP(data);
-        break;
-      case "hash":
-        resultData = await analyzeHash(data);
-        break;
-      case "log":
-        resultData = await analyzeLog(data);
-        break;
-      case "email":
-        resultData = await analyzeEmail(data);
-        break;
-      default:
-        throw new Error("Invalid threat type");
-    }
-
-    resultData = JSON.parse(resultData);
+    const resultData = await analyzeThreat(data, type);
 
     const { defenseResultCollection } = await getCollections();
     const response = await defenseResultCollection.insertOne({
       ...resultData,
       timestamp: new Date().toISOString(),
-      user_id: user.email,
+      userId: user.email,
     });
 
     return NextResponse.json({
       ...resultData,
       timestamp: new Date().toISOString(),
-      user_id: user.email,
+      userId: user.email,
       _id: response.insertedId,
     });
-  } catch (error) {
-    console.error("POST error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -122,8 +92,7 @@ export async function DELETE(request: NextRequest) {
       deletedCount: response.deletedCount,
       message: `${response.deletedCount} session(s) deleted successfully`,
     });
-  } catch (error) {
-    console.error("Delete sessions error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to delete sessions" },
       { status: 500 }

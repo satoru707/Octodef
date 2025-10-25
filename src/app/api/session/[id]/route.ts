@@ -1,19 +1,17 @@
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
 import { Session } from "@/types/types";
 import { getCollections } from "@/lib/db";
 
-export async function GET({
-  params,
-}: {
-  params: { id: string };
-}): Promise<NextResponse> {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = params;
-
+    const { id } = await params;
     const session = (await auth()) as Session | null;
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,8 +25,7 @@ export async function GET({
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("Error fetching session:", error);
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

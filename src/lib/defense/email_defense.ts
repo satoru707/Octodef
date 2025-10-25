@@ -3,10 +3,10 @@ export const runtime = "nodejs";
 import { simpleParser, ParsedMail } from "mailparser";
 import { DefenseResult, AgentStatus } from "@/types/types";
 
-const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY || "";
-const HA_API_KEY = process.env.HYBRIDANALYSIS_API_KEY || "";
-const MS_API_KEY = process.env.MALSHARE_API_KEY || "";
-const ABUSEIPDB_KEY = process.env.ABUSEIPDB_API_KEY || "";
+const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY! || "";
+const HA_API_KEY = process.env.HYBRIDANALYSIS_API_KEY! || "";
+const MS_API_KEY = process.env.MALSHARE_API_KEY! || "";
+const ABUSEIPDB_KEY = process.env.ABUSEIPDB_API_KEY! || "";
 
 async function safeFetch(
   url: string,
@@ -28,8 +28,6 @@ async function safeFetch(
 export async function analyzeThreat(
   input: string | Buffer
 ): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
-  console.time("EMAIL_ANALYSIS_SPEED");
-
   const result: Omit<DefenseResult, "timestamp" | "_id" | "userId"> = {
     input: {
       type: "email",
@@ -72,11 +70,8 @@ export async function analyzeThreat(
       `Analysis Complete: ${result.overallRisk}% Risk`,
       "System"
     );
-
-    console.timeEnd("EMAIL_ANALYSIS_SPEED");
     return result;
   } catch (error: unknown) {
-    console.error("EMAIL ERROR:", error);
     result.status = "failed";
     result.findings.push({
       agent: "System",
@@ -84,7 +79,6 @@ export async function analyzeThreat(
       message: "Email analysis failed",
       details: (error as Error).message,
     });
-    console.timeEnd("EMAIL_ANALYSIS_SPEED");
     return result;
   }
 }

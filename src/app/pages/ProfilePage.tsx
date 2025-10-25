@@ -53,8 +53,7 @@ export const ProfilePage = () => {
             name: currentSession.user?.name || "",
           },
         });
-      } catch (err) {
-        console.error("Session fetch failed:", err);
+      } catch {
         toast.error("Failed to fetch session");
       } finally {
         setLoading(false);
@@ -123,8 +122,7 @@ export const ProfilePage = () => {
       return false;
     });
   };
-
-  if (loading)
+  if (loading || !sessions)
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <LoadingSpinner message="Loading profile..." />
@@ -360,7 +358,7 @@ export const ProfilePage = () => {
                       >
                         <label className="flex items-start justify-between gap-4 w-full">
                           {selectionMode && (
-                            <div className="flex-shrink-0 mt-0.5">
+                            <div className="shrink-0 mt-0.5">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -415,7 +413,7 @@ export const ProfilePage = () => {
 
                           {sessionItem.overallRisk !== undefined && (
                             <div
-                              className={`text-right flex-shrink-0 transition-colors duration-200 ${
+                              className={`text-right shrink-0 transition-colors duration-200 ${
                                 isSelected ? "text-red-300" : "text-white"
                               }`}
                             >

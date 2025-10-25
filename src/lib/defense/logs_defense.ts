@@ -273,8 +273,6 @@ async function trainModel() {
 export async function analyzeThreat(
   input: string
 ): Promise<Omit<DefenseResult, "timestamp" | "_id" | "userId">> {
-  console.time("LOG_ANALYSIS_SPEED");
-
   await trainModel();
 
   const result: Omit<DefenseResult, "timestamp" | "_id" | "userId"> = {
@@ -314,11 +312,8 @@ export async function analyzeThreat(
 
     result.status = "complete";
     addTimelineEvent(result, "Log Analysis Complete", "System");
-
-    console.timeEnd("LOG_ANALYSIS_SPEED");
     return result;
   } catch (error: unknown) {
-    console.timeEnd("LOG_ANALYSIS_SPEED");
     result.status = "failed";
     result.findings.push({
       agent: "System",
@@ -333,7 +328,7 @@ export async function analyzeThreat(
 const abuseCache = new Map<string, { data: object; time: number }>();
 
 async function queryAbuseIPDB(ip: string) {
-  if (!process.env.ABUSEIPDB_KEY) {
+  if (!process.env.ABUSEIPDB_KEY!) {
     throw new Error("Missing mandatory AbuseIPDB API key (ABUSEIPDB_KEY).");
   }
 
@@ -341,7 +336,7 @@ async function queryAbuseIPDB(ip: string) {
   if (cached && Date.now() - cached.time < 10 * 60 * 1000) return cached.data;
 
   const headers = {
-    Key: process.env.ABUSEIPDB_KEY,
+    Key: process.env.ABUSEIPDB_KEY!,
     Accept: "application/json",
   };
 

@@ -38,13 +38,13 @@ export const metadata: Metadata = {
   authors: [{ name: "Praise Olaoye", url: "https://github.com/satoru707" }],
   creator: "Praise Olaoye",
   publisher: "Praise Olaoye",
-  metadataBase: new URL("http://localhost:3000/"),
+  metadataBase: new URL(`${process.env.NEXTAUTH_URL}`),
 
   openGraph: {
     title: "OctoDef — Cybersecurity Defense Simulator",
     description:
       "Train your digital defense instincts through an immersive simulation inspired by the octopus.",
-    url: "http://localhost:3000/",
+    url: `${process.env.NEXTAUTH_URL}`,
     siteName: "OctoDef",
     images: [
       {

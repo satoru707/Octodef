@@ -25,7 +25,7 @@ export interface AgentStatus {
 }
 
 export interface DefenseResult {
-  _id: ObjectId | string;
+  _id?: ObjectId | string;
   timestamp: string;
   input: ThreatInput;
   overallRisk: number;

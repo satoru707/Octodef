@@ -13,7 +13,6 @@ import { useSessionDetails } from "@/hooks/defenseQueries";
 export const SessionDetailPage = ({ id }: { id: string }) => {
   const router = useRouter();
   const { data: result, isLoading, error, refetch } = useSessionDetails(id);
-
   return (
     <div className="min-h-screen bg-black pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

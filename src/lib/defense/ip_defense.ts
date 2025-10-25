@@ -8,7 +8,7 @@ import {
 import { DefenseResult, AgentStatus } from "@/types/types";
 import countriesData from "@/lib/data/country.json" assert { type: "json" };
 
-const ABUSEIPDB_API_KEY = process.env.ABUSEIPDB_API_KEY || "";
+const ABUSEIPDB_API_KEY = process.env.ABUSEIPDB_API_KEY! || "";
 const abuseClient = ABUSEIPDB_API_KEY
   ? new AbuseIPDBClient(ABUSEIPDB_API_KEY)
   : null;
@@ -280,7 +280,7 @@ async function runMalShareAgent(
   result.agents.push(agent);
 
   try {
-    const apiKey = process.env.MALSHARE_API_KEY;
+    const apiKey = process.env.MALSHARE_API_KEY!;
     if (!apiKey) throw new Error("Missing MALSHARE_API_KEY");
 
     const res = await fetch(
@@ -328,7 +328,7 @@ async function runHybridAnalysisAgent(
   result.agents.push(agent);
 
   try {
-    const apiKey = process.env.HYBRIDANALYSIS_API_KEY;
+    const apiKey = process.env.HYBRIDANALYSIS_API_KEY!;
     if (!apiKey) throw new Error("Missing HYBRID_API_KEY");
 
     const res = await fetch(
