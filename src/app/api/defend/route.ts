@@ -14,10 +14,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { defenseResultCollection } = await getCollections();
     const results = await defenseResultCollection
-      .find({ user_id: user.email })
+      .find({ userId: user.email })
       .sort({ timestamp: -1 })
       .toArray();
-
     return NextResponse.json(results);
   } catch {
     return NextResponse.json(
@@ -84,7 +83,7 @@ export async function DELETE(request: NextRequest) {
 
     const response = await defenseResultCollection.deleteMany({
       _id: { $in: validSessionIds },
-      user_id: user.email,
+      userId: user.email,
     });
 
     return NextResponse.json({

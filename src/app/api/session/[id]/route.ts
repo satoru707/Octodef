@@ -19,7 +19,7 @@ export async function GET(
     const { defenseResultCollection } = await getCollections();
     const result = await defenseResultCollection.findOne({
       _id: new ObjectId(id),
-      user_id: session.user.email,
+      userId: session.user.email,
     });
     if (!result) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
